@@ -1058,3 +1058,34 @@ class testFunctionCallsFlow(FlowTestsBase):
         # exp(True)
         query = """RETURN exp(True)"""
         self.expect_type_error(query)
+
+    def test38_unary_operations(self):
+        # Test invalid inputs.
+        queries = [
+            "RETURN -+3",
+            "RETURN ++3",
+            "RETURN ---3",
+            "RETURN --+3",
+            "RETURN -+-3",
+            "RETURN -++3",
+            "RETURN +--3",
+            "RETURN +-+3",
+            "RETURN ++-3",
+            "RETURN +++3",
+            "RETURN + NOT 3",
+            "RETURN + IS NOT NULL 3"
+        ]
+        for query in queries:
+            self.expect_error(query, "Invalid input")
+
+        # Test valid inputs
+        query = "RETURN --3"
+        expected_result = [[3]]
+        actual_result = graph.query(query)
+        self.env.assertEquals(actual_result.result_set, expected_result)
+
+        query = "RETURN +-3"
+        expected_result = [[-3]]
+        actual_result = graph.query(query)
+        self.env.assertEquals(actual_result.result_set, expected_result)     
+        
