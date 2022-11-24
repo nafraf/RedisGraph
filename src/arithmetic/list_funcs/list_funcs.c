@@ -454,6 +454,66 @@ SIValue AR_REDUCE
 	return accum;
 }
 
+// Given a list, return a list after inserting a given value a given number of times at a given index.
+SIValue AR_LIST_INSERT(SIValue *argv, int argc, void *private_data) {
+	// TO DO:
+	return SI_NullVal();
+}
+
+// Given a list, return a list after inserting the elements of a second list a given number of times at a given index.
+SIValue AR_LIST_INSERT_LIST(SIValue *argv, int argc, void *private_data) {
+	// TO DO:
+	return SI_NullVal();
+}
+
+// Given a list, return a list after removing a given number of consecutive elements, starting at a given index.
+SIValue AR_LIST_REMOVE(SIValue *argv, int argc, void *private_data) {
+	// TO DO:
+	return SI_NullVal();
+}
+
+// Given two lists, return their union (v1 U v2).
+SIValue AR_LIST_UNION(SIValue *argv, int argc, void *private_data) {
+	// TO DO:
+	return SI_NullVal();
+}
+
+// Given two lists, return their intersection (v1 ∩ v2).
+SIValue AR_LIST_INTERSECTION(SIValue *argv, int argc, void *private_data) {
+	// TO DO:
+	return SI_NullVal();
+}
+
+// Given two lists, return their difference (v1 - v2).
+SIValue AR_LIST_DIFF(SIValue *argv, int argc, void *private_data) {
+	// TO DO:
+	return SI_NullVal();
+}
+
+// Given two lists, return their symmetric difference (AKA their disjunctive union) (v1 Δ v2).
+SIValue AR_LIST_SYMDIFF(SIValue *argv, int argc, void *private_data) {
+	// TO DO:
+	return SI_NullVal();
+}
+
+// Given a list, return a list where each element which is a list by itself is replaced with its members.
+SIValue AR_LIST_FLATTEN(SIValue *argv, int argc, void *private_data) {
+	// TO DO:
+	return SI_NullVal();
+}
+
+// Given a list, return a list where each element which is a list by itself is replaced with its members.
+SIValue AR_LIST_DEDUP(SIValue *argv, int argc, void *private_data) {
+	// TO DO:
+	return SI_NullVal();
+}
+
+// Given a list, return a list with similar elements, but sorted.
+SIValue AR_LIST_SORT(SIValue *argv, int argc, void *private_data) {
+	// TO DO:
+	return SI_NullVal();
+}
+
 void Register_ListFuncs() {
 	SIType *types;
 	SIType ret_type;
@@ -551,6 +611,85 @@ void Register_ListFuncs() {
 	func_desc = AR_FuncDescNew("reduce", AR_REDUCE, 3, 3, types, ret_type, true, true);
 	AR_SetPrivateDataRoutines(func_desc, ListReduceCtx_Free,
 							  ListReduceCtx_Clone);
+	AR_RegFunc(func_desc);
+
+	types = array_new(SIType, 5);
+	array_append(types, T_ARRAY | T_NULL);	// list
+	array_append(types, SI_ALL | T_NULL);	// val
+	array_append(types, T_INT64 | T_NULL);	// idx
+	array_append(types, T_INT64 | T_NULL);	// count
+	array_append(types, T_BOOL | T_NULL);	// dups
+	ret_type = T_ARRAY | T_NULL;
+	func_desc = AR_FuncDescNew("list.insert", AR_LIST_INSERT, 2, 5, types, ret_type, false, true);
+	AR_RegFunc(func_desc);
+
+	types = array_new(SIType, 5);
+	array_append(types, T_ARRAY | T_NULL);	// list
+	array_append(types, T_ARRAY | T_NULL);	// list2
+	array_append(types, T_INT64 | T_NULL);	// idx
+	array_append(types, T_INT64 | T_NULL);	// count
+	array_append(types, T_BOOL | T_NULL);	// dups
+	ret_type = T_ARRAY | T_NULL;
+	func_desc = AR_FuncDescNew("list.insertListElements", AR_LIST_INSERT_LIST, 2, 5, types, ret_type, false, true);
+	AR_RegFunc(func_desc);
+
+	types = array_new(SIType, 3);
+	array_append(types, T_ARRAY | T_NULL);	// list
+	array_append(types, T_INT64 | T_NULL);	// idx
+	array_append(types, T_INT64 | T_NULL);	// count
+	ret_type = T_ARRAY | T_NULL;
+	func_desc = AR_FuncDescNew("list.remove", AR_LIST_REMOVE, 2, 3, types, ret_type, false, true);
+	AR_RegFunc(func_desc);
+
+	types = array_new(SIType, 3);
+	array_append(types, T_ARRAY | T_NULL);	// list1
+	array_append(types, T_ARRAY | T_NULL);	// list1
+	array_append(types, T_BOOL | T_NULL);	// dups
+	ret_type = T_ARRAY | T_NULL;
+	func_desc = AR_FuncDescNew("list.union", AR_LIST_UNION, 2, 3, types, ret_type, false, true);
+	AR_RegFunc(func_desc);
+
+	types = array_new(SIType, 3);
+	array_append(types, T_ARRAY | T_NULL);	// list1
+	array_append(types, T_ARRAY | T_NULL);	// list1
+	array_append(types, T_BOOL | T_NULL);	// dups
+	ret_type = T_ARRAY | T_NULL;
+	func_desc = AR_FuncDescNew("list.intersection", AR_LIST_INTERSECTION, 2, 3, types, ret_type, false, true);
+	AR_RegFunc(func_desc);
+
+	types = array_new(SIType, 3);
+	array_append(types, T_ARRAY | T_NULL);	// list1
+	array_append(types, T_ARRAY | T_NULL);	// list1
+	array_append(types, T_BOOL | T_NULL);	// dups
+	ret_type = T_ARRAY | T_NULL;
+	func_desc = AR_FuncDescNew("list.diff", AR_LIST_DIFF, 2, 3, types, ret_type, false, true);
+	AR_RegFunc(func_desc);	
+
+	types = array_new(SIType, 3);
+	array_append(types, T_ARRAY | T_NULL);	// list1
+	array_append(types, T_ARRAY | T_NULL);	// list2
+	array_append(types, T_BOOL | T_NULL);	// dups
+	ret_type = T_ARRAY | T_NULL;
+	func_desc = AR_FuncDescNew("list.symDiff", AR_LIST_SYMDIFF, 2, 3, types, ret_type, false, true);
+	AR_RegFunc(func_desc);
+
+	types = array_new(SIType, 2);
+	array_append(types, T_ARRAY | T_NULL);	// list
+	array_append(types, T_INT64 | T_NULL);	// levels
+	ret_type = T_ARRAY | T_NULL;
+	func_desc = AR_FuncDescNew("list.flatten", AR_LIST_FLATTEN, 2, 2, types, ret_type, false, true);
+	AR_RegFunc(func_desc);
+
+	types = array_new(SIType, 1);
+	array_append(types, T_ARRAY | T_NULL);	// list
+	ret_type = T_ARRAY | T_NULL;
+	func_desc = AR_FuncDescNew("list.dedup", AR_LIST_DEDUP, 1, 1, types, ret_type, false, true);
+	AR_RegFunc(func_desc);
+
+	types = array_new(SIType, 1);
+	array_append(types, T_ARRAY | T_NULL);	// list
+	ret_type = T_ARRAY | T_NULL;
+	func_desc = AR_FuncDescNew("list.sort", AR_LIST_SORT, 1, 1, types, ret_type, false, true);
 	AR_RegFunc(func_desc);
 }
 
