@@ -57,6 +57,17 @@ class testList(FlowTestsBase):
         global redis_graph
         redis_con = self.env.getConnection()
         redis_graph = Graph(redis_con, GRAPH_ID)
+    
+    def expect_error(self, query, expected_err_msg):
+        try:
+            redis_graph.query(query)
+            assert(False)
+        except redis.exceptions.ResponseError as e:
+            self.env.assertIn(expected_err_msg, str(e))
+    
+    def get_res_and_assertEquals(self, query, expected_result):
+        actual_result = redis_graph.query(query)
+        self.env.assertEquals(actual_result.result_set, expected_result)
 
     def test01_collect(self):
         for i in range(10):
@@ -826,3 +837,21 @@ class testList(FlowTestsBase):
             self.env.assertTrue(False)
         except ResponseError as e:
             self.env.assertContains("Received 0 arguments to function 'toStringList', expected at least 1", str(e))
+
+    def test10_list_dedup(self):
+        query_to_expected_result = {
+            "RETURN list.dedup(null)": [[[]]], 
+            "RETURN list.dedup([1, 2, 3, true])": [[[1, 2, 3, True]]],
+            "RETURN list.dedup([1, null, 2, 3, null, 2, 'a', 'b', 'a'])": [[[1, None, 2, 3, 'a', 'b']]],
+        }
+        for query, expected_result in query_to_expected_result.items():
+            self.get_res_and_assertEquals(query, expected_result)
+
+        queries_with_errors = {
+            "RETURN list.dedup(1)" : "Type mismatch: expected List or Null but was Integer",
+            "RETURN list.dedup('a')" : "Type mismatch: expected List or Null but was String", 
+            "RETURN list.dedup(1.1)" : "Type mismatch: expected List or Null but was Float",
+            "RETURN list.dedup(true)" : "Type mismatch: expected List or Null but was Boolean",
+        }
+        for query, error in queries_with_errors.items():
+            self.expect_error(query, error)    
