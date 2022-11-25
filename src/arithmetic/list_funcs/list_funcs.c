@@ -472,9 +472,53 @@ SIValue AR_LIST_REMOVE(SIValue *argv, int argc, void *private_data) {
 	return SI_NullVal();
 }
 
-// Given two lists, return their union (v1 U v2).
+// Given two lists, return their union (v1 ∪ v2).
+// list.union(v1, v2, dupPolicy = 0) → list
 SIValue AR_LIST_UNION(SIValue *argv, int argc, void *private_data) {
+	SIValue v1 = argv[0];
+	SIValue v2 = argv[1];
+
+	int64_t dupPolicy = 0;
+	if(argc == 3) {
+		if (SI_TYPE(argv[2]) != T_INT64) {
+			Error_SITypeMismatch(argv[1], T_INT64);
+			return SI_NullVal();
+		} else {
+			dupPolicy = argv[2].longval;
+			if(dupPolicy < 0 || dupPolicy > 2) {
+				ErrorCtx_RaiseRuntimeException("dupPolicy must be an integer in [0..2]");
+				return SI_NullVal();
+			}
+		}
+	}
+
+	if(SI_TYPE(v1) == T_NULL) {
+		v1 = SI_EmptyArray();
+	} else if(SI_TYPE(v1) != T_ARRAY) {
+		v1 = SI_Array(1);
+		SIArray_Append(&v1, argv[0]);
+	}
+
+	if(SI_TYPE(v2) == T_NULL) {
+		v2 = SI_EmptyArray();
+	} else if(SI_TYPE(v2) != T_ARRAY) {
+		v2 = SI_Array(1);
+		SIArray_Append(&v1, argv[1]);
+	}
+
+	uint32_t len1 = SIArray_Length(v1);
+	uint32_t len2 = SIArray_Length(v2);
+
 	// TO DO:
+	// switch(dupPolicy){
+	// 	case(0):
+	// 		break;
+	// 	case(1):
+	// 		break;
+	// 	case(2):
+	// 		break;
+	// }
+
 	return SI_NullVal();
 }
 
@@ -502,10 +546,22 @@ SIValue AR_LIST_FLATTEN(SIValue *argv, int argc, void *private_data) {
 	return SI_NullVal();
 }
 
-// Given a list, return a list where each element which is a list by itself is replaced with its members.
+// Given a list, return a similar list after removing duplicate elements.
 SIValue AR_LIST_DEDUP(SIValue *argv, int argc, void *private_data) {
-	// TO DO:
-	return SI_NullVal();
+	SIValue array 		= argv[0];
+	uint32_t arrayLen 	= SIArray_Length(array);
+	SIValue newArray 	= SIArray_New(0);
+
+	if(arrayLen == 0) return newArray;
+
+	for(uint i = 0; i < arrayLen; i++) {
+		SIValue elem	= SIArray_Get(array, i);
+
+		if(SIArray_Contains(newArray, elem) == false) {
+			SIArray_Append(&newArray, elem);
+		}
+	}
+	return newArray;
 }
 
 // Given a list, return a list with similar elements, but sorted.
@@ -644,7 +700,7 @@ void Register_ListFuncs() {
 	types = array_new(SIType, 3);
 	array_append(types, T_ARRAY | T_NULL);	// list1
 	array_append(types, T_ARRAY | T_NULL);	// list1
-	array_append(types, T_BOOL | T_NULL);	// dups
+	array_append(types, T_INT64 | T_NULL);	// dupPolicy
 	ret_type = T_ARRAY | T_NULL;
 	func_desc = AR_FuncDescNew("list.union", AR_LIST_UNION, 2, 3, types, ret_type, false, true);
 	AR_RegFunc(func_desc);
@@ -652,7 +708,7 @@ void Register_ListFuncs() {
 	types = array_new(SIType, 3);
 	array_append(types, T_ARRAY | T_NULL);	// list1
 	array_append(types, T_ARRAY | T_NULL);	// list1
-	array_append(types, T_BOOL | T_NULL);	// dups
+	array_append(types, T_INT64 | T_NULL);	// dupPolicy
 	ret_type = T_ARRAY | T_NULL;
 	func_desc = AR_FuncDescNew("list.intersection", AR_LIST_INTERSECTION, 2, 3, types, ret_type, false, true);
 	AR_RegFunc(func_desc);
@@ -660,7 +716,7 @@ void Register_ListFuncs() {
 	types = array_new(SIType, 3);
 	array_append(types, T_ARRAY | T_NULL);	// list1
 	array_append(types, T_ARRAY | T_NULL);	// list1
-	array_append(types, T_BOOL | T_NULL);	// dups
+	array_append(types, T_INT64 | T_NULL);	// dupPolicy
 	ret_type = T_ARRAY | T_NULL;
 	func_desc = AR_FuncDescNew("list.diff", AR_LIST_DIFF, 2, 3, types, ret_type, false, true);
 	AR_RegFunc(func_desc);	
@@ -668,7 +724,7 @@ void Register_ListFuncs() {
 	types = array_new(SIType, 3);
 	array_append(types, T_ARRAY | T_NULL);	// list1
 	array_append(types, T_ARRAY | T_NULL);	// list2
-	array_append(types, T_BOOL | T_NULL);	// dups
+	array_append(types, T_INT64 | T_NULL);	// dupPolicy
 	ret_type = T_ARRAY | T_NULL;
 	func_desc = AR_FuncDescNew("list.symDiff", AR_LIST_SYMDIFF, 2, 3, types, ret_type, false, true);
 	AR_RegFunc(func_desc);
@@ -687,7 +743,7 @@ void Register_ListFuncs() {
 	AR_RegFunc(func_desc);
 
 	types = array_new(SIType, 1);
-	array_append(types, T_ARRAY | T_NULL);	// list
+	array_append(types, T_ARRAY);	// list
 	ret_type = T_ARRAY | T_NULL;
 	func_desc = AR_FuncDescNew("list.sort", AR_LIST_SORT, 1, 1, types, ret_type, false, true);
 	AR_RegFunc(func_desc);

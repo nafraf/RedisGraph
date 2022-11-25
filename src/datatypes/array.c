@@ -34,6 +34,18 @@ uint32_t SIArray_Length(SIValue siarray) {
 	return array_len(siarray.array);
 }
 
+bool SIArray_Contains(SIValue siarray, SIValue value) {
+	uint array_len = SIArray_Length(siarray);
+	for(uint i = 0; i < array_len; i++) {
+		SIValue elem = SIArray_Get(siarray, i);
+		if(SI_TYPE(elem) & SI_TYPE(value)) {
+			int res = SIValue_Compare(elem, value, NULL);
+			if(res == 0) return true;
+		}
+	}
+	return false;
+}
+
 bool SIArray_ContainsType(SIValue siarray, SIType t) {
 	uint array_len = SIArray_Length(siarray);
 	for(uint i = 0; i < array_len; i++) {
