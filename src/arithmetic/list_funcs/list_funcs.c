@@ -522,6 +522,7 @@ SIValue AR_LIST_UNION(SIValue *argv, int argc, void *private_data) {
 
 			a = &v1;
 			b = &v2;
+			// to ensure that SIArray_Length(a) > SIArray_Length(b)
 			if(len2 > len1) {
 				a = &v2;
 				b = &v1;
@@ -545,6 +546,7 @@ SIValue AR_LIST_UNION(SIValue *argv, int argc, void *private_data) {
 			len1 = SIArray_Length(v1);
             len2 = SIArray_Length(v2);
             
+			// to ensure that SIArray_Length(a) > SIArray_Length(b)
 			if(len2 > len1) {
 				a = &v2;
 				b = &v1;
@@ -562,8 +564,73 @@ SIValue AR_LIST_UNION(SIValue *argv, int argc, void *private_data) {
 
 // Given two lists, return their intersection (v1 ∩ v2).
 SIValue AR_LIST_INTERSECTION(SIValue *argv, int argc, void *private_data) {
-	// TO DO:
-	return SI_NullVal();
+	uint32_t len1 = 0;
+    uint32_t len2 = 0;
+    SIValue v1 = argv[0];
+    SIValue v2 = argv[1];
+	SIValue result = SI_EmptyArray();
+
+    int64_t dupPolicy = 0;
+    if (argc == 3) {
+        if (SI_TYPE(argv[2]) != T_INT64) {
+            Error_SITypeMismatch(argv[1], T_INT64);
+            return SI_NullVal();
+        } else {
+            dupPolicy = argv[2].longval;
+            if (dupPolicy < 0 || dupPolicy > 2) {
+                ErrorCtx_RaiseRuntimeException(
+                    "Third argument must be an integer in [0..1]");
+                return SI_NullVal();
+            }
+        }
+    }
+
+	if (SI_TYPE(argv[0]) == T_NULL) {
+        v1 = SI_EmptyArray();
+    } else if (SI_TYPE(v1) != T_ARRAY) {
+        v1 = SI_Array(1);
+        SIArray_Append(&v1, argv[0]);
+    }
+
+    if (SI_TYPE(argv[1]) == T_NULL) {
+        v2 = SI_EmptyArray();
+    } else if (SI_TYPE(v2) != T_ARRAY) {
+        v2 = SI_Array(1);
+        SIArray_Append(&v1, argv[1]);
+    }
+
+	SIValue* a = &v1;
+	SIValue* b = &v2;
+
+	switch (dupPolicy) {
+		// If a value appears x>0 times in v1 and y>0 times in v2 it will appear one time in the result.
+		case (0):
+            v1 = SIArray_Dedup(v1);
+            v2 = SIArray_Dedup(v2);
+            len1 = SIArray_Length(v1);
+            len2 = SIArray_Length(v2);
+
+			a = &v1;
+			b = &v2;
+			// to ensure that SIArray_Length(a) > SIArray_Length(b)
+			if(len2 > len1) {
+				a = &v2;
+				b = &v1;
+				len2 = len1;
+			}
+
+			for (uint i = 0; i < len2; i++) {
+                SIValue elem = b->array[i];
+                if (SIArray_Contains(*a, elem)) {
+					SIArray_Append(&result, elem);
+                }
+            }
+			break;
+		// If a value appears x times in v1 and y times in v2 it will appear min(x, y) times in the result.
+		case (1):
+			break;
+	}
+	return result;
 }
 
 // Given two lists, return their difference (v1 - v2).
