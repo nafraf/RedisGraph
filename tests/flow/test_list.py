@@ -838,7 +838,29 @@ class testList(FlowTestsBase):
         except ResponseError as e:
             self.env.assertContains("Received 0 arguments to function 'toStringList', expected at least 1", str(e))
 
-    def test10_list_dedup(self):
+    def test10_list_flatten(self):
+        query_to_expected_result = {
+            "RETURN list.flatten([[]])" : [[[]]], 
+            "RETURN list.flatten([null])" : [[[None]]], 
+            "RETURN list.flatten([[[[1]]]], 2)" : [[[[1]]]],
+            "RETURN list.flatten([[[[1]]]], 10)" : [[[1]]],
+            "RETURN list.flatten([1, 1, [1, 2, 3, [3, 4, 5]]], 1)" : [[[1, 1, 1, 2, 3, [3, 4, 5]]]],
+            "RETURN list.flatten([1, 1, [1, 2, 3, [3, 4, 5]]], 2)" : [[[1, 1, 1, 2, 3, 3, 4, 5]]],
+            "RETURN list.flatten([1, 'a',[3, 4], ['b', null], 5.5])" : [[[1, 'a', 3, 4, 'b', None, 5.5]]],
+        }
+        for query, expected_result in query_to_expected_result.items():
+            self.get_res_and_assertEquals(query, expected_result)
+
+        queries_with_errors = {
+            "RETURN list.flatten()" : "Received 0 arguments to function 'list.flatten', expected at least 1",
+            "RETURN list.flatten(1)" : "Type mismatch: expected List but was Integer", 
+            "RETURN list.flatten([], [])" : "Type mismatch: expected Integer or Null but was List",
+            "RETURN list.flatten([], 0)" : "Second argument must be a positive integer",
+        }
+        for query, error in queries_with_errors.items():
+            self.expect_error(query, error)
+
+    def test11_list_dedup(self):
         query_to_expected_result = {
             "RETURN list.dedup(null)": [[[]]], 
             "RETURN list.dedup([1, 2, 3, true])": [[[1, 2, 3, True]]],
@@ -854,4 +876,4 @@ class testList(FlowTestsBase):
             "RETURN list.dedup(true)" : "Type mismatch: expected List or Null but was Boolean",
         }
         for query, error in queries_with_errors.items():
-            self.expect_error(query, error)    
+            self.expect_error(query, error)

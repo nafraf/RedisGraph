@@ -96,3 +96,11 @@ XXH64_hash_t SIArray_HashCode(SIValue siarray);
   */
 void SIArray_Free(SIValue siarray);
 
+/**
+  * @brief  Return a list where each element which is a list by itself is replaced with its members
+  * @param  siarray: input list
+  * @param  levels: number of times flatten will run recursively
+  * @retval Array where each element which is a list by itself is replaced with its members.
+  */
+SIValue SIArray_Flatten(SIValue siarray, uint32_t levels);
+

@@ -542,15 +542,31 @@ SIValue AR_LIST_SYMDIFF(SIValue *argv, int argc, void *private_data) {
 
 // Given a list, return a list where each element which is a list by itself is replaced with its members.
 SIValue AR_LIST_FLATTEN(SIValue *argv, int argc, void *private_data) {
-	// TO DO:
-	return SI_NullVal();
+	SIValue array 	= argv[0];
+	int64_t levels 	= 1;
+	
+	if(argc == 2) {
+		if (SI_TYPE(argv[1]) != T_INT64) {
+			Error_SITypeMismatch(argv[1], T_INT64);
+			return SI_NullVal();
+		} else {
+			levels = argv[1].longval;
+			if(levels < 1) {
+				ErrorCtx_RaiseRuntimeException("Second argument must be a positive integer");
+				return SI_NullVal();
+			}
+		}
+	}
+
+	SIValue newArray = SIArray_Flatten(array, levels);
+	return newArray;
 }
 
 // Given a list, return a similar list after removing duplicate elements.
 SIValue AR_LIST_DEDUP(SIValue *argv, int argc, void *private_data) {
 	SIValue array 		= argv[0];
-	uint32_t arrayLen 	= SIArray_Length(array);
 	SIValue newArray 	= SIArray_New(0);
+	uint32_t arrayLen 	= SIArray_Length(array);
 
 	if(arrayLen == 0) return newArray;
 
@@ -730,10 +746,10 @@ void Register_ListFuncs() {
 	AR_RegFunc(func_desc);
 
 	types = array_new(SIType, 2);
-	array_append(types, T_ARRAY | T_NULL);	// list
+	array_append(types, T_ARRAY);			// list
 	array_append(types, T_INT64 | T_NULL);	// levels
 	ret_type = T_ARRAY | T_NULL;
-	func_desc = AR_FuncDescNew("list.flatten", AR_LIST_FLATTEN, 2, 2, types, ret_type, false, true);
+	func_desc = AR_FuncDescNew("list.flatten", AR_LIST_FLATTEN, 1, 2, types, ret_type, false, true);
 	AR_RegFunc(func_desc);
 
 	types = array_new(SIType, 1);

@@ -133,3 +133,20 @@ void SIArray_Free(SIValue siarray) {
 	array_free(siarray.array);
 }
 
+SIValue SIArray_Flatten(SIValue siarray, uint32_t levels) {
+	uint arrayLen 		= SIArray_Length(siarray);
+	SIValue newArray 	= SIArray_New(arrayLen);
+	for(uint i = 0; i < arrayLen; i++) {
+		SIValue value = siarray.array[i];
+		if ((SI_TYPE(value) != T_ARRAY) || levels < 1) {
+			SIArray_Append(&newArray, value);
+		} else {
+			SIValue innerArray = SIArray_Flatten(value, levels - 1);
+			uint innerArrayLen = SIArray_Length(innerArray);
+			for(uint j = 0; j < innerArrayLen; j++) {
+				SIArray_Append(&newArray, innerArray.array[j]);
+			}	
+		}
+	}
+	return newArray;
+}
