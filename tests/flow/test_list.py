@@ -877,3 +877,16 @@ class testList(FlowTestsBase):
         }
         for query, error in queries_with_errors.items():
             self.expect_error(query, error)
+
+    def test12_list_union(self):
+        query_to_expected_result = {
+            "RETURN list.union([], [], 0)": [[[]]],
+            "RETURN list.union([1, 2, 3], [1, 2, 2, 3, 3, 3], 0)": [[[1, 2, 3]]],
+            "RETURN list.union([1, 2, 2, 3, 3, 3], [1, 2, 3], 0)": [[[1, 2, 3]]],
+            # "RETURN list.union([1, 2, 3], [1, 2, 2, 3, 3, 3], 1)": [[[1, 2, 2, 3, 3, 3]],
+            # "RETURN list.union([1, 2, 2, 3, 3, 3], [1, 2, 3], 1)": [[[1, 2, 2, 3, 3, 3]]], 
+            "RETURN list.union([1, 2, 3], [1, 2, 2, 3, 3, 3], 2)": [[[1, 2, 2, 3, 3, 3, 1, 2, 3]]],
+            "RETURN list.union([1, 2, 2, 3, 3, 3], [1, 2, 3], 2)": [[[1, 2, 2, 3, 3, 3, 1, 2, 3]]], 
+        }
+        for query, expected_result in query_to_expected_result.items():
+            self.get_res_and_assertEquals(query, expected_result)

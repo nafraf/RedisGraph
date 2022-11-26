@@ -475,51 +475,89 @@ SIValue AR_LIST_REMOVE(SIValue *argv, int argc, void *private_data) {
 // Given two lists, return their union (v1 ∪ v2).
 // list.union(v1, v2, dupPolicy = 0) → list
 SIValue AR_LIST_UNION(SIValue *argv, int argc, void *private_data) {
-	SIValue v1 = argv[0];
-	SIValue v2 = argv[1];
+	uint32_t len1 = 0;
+    uint32_t len2 = 0;
+    SIValue v1 = argv[0];
+    SIValue v2 = argv[1];
 
-	int64_t dupPolicy = 0;
-	if(argc == 3) {
-		if (SI_TYPE(argv[2]) != T_INT64) {
-			Error_SITypeMismatch(argv[1], T_INT64);
-			return SI_NullVal();
-		} else {
-			dupPolicy = argv[2].longval;
-			if(dupPolicy < 0 || dupPolicy > 2) {
-				ErrorCtx_RaiseRuntimeException("dupPolicy must be an integer in [0..2]");
-				return SI_NullVal();
+    int64_t dupPolicy = 0;
+    if (argc == 3) {
+        if (SI_TYPE(argv[2]) != T_INT64) {
+            Error_SITypeMismatch(argv[1], T_INT64);
+            return SI_NullVal();
+        } else {
+            dupPolicy = argv[2].longval;
+            if (dupPolicy < 0 || dupPolicy > 2) {
+                ErrorCtx_RaiseRuntimeException(
+                    "Third argument must be an integer in [0..2]");
+                return SI_NullVal();
+            }
+        }
+    }
+
+	if (SI_TYPE(argv[0]) == T_NULL) {
+        v1 = SI_EmptyArray();
+    } else if (SI_TYPE(v1) != T_ARRAY) {
+        v1 = SI_Array(1);
+        SIArray_Append(&v1, argv[0]);
+    }
+
+    if (SI_TYPE(argv[1]) == T_NULL) {
+        v2 = SI_EmptyArray();
+    } else if (SI_TYPE(v2) != T_ARRAY) {
+        v2 = SI_Array(1);
+        SIArray_Append(&v1, argv[1]);
+    }
+
+	SIValue* a = &v1;
+	SIValue* b = &v2;
+
+    switch (dupPolicy) {
+		// If a value appears x>0 times in v1 or y>0 times in v2 it will appear one time in the result.
+        case (0):
+            v1 = SIArray_Dedup(v1);
+            v2 = SIArray_Dedup(v2);
+            len1 = SIArray_Length(v1);
+            len2 = SIArray_Length(v2);
+
+			a = &v1;
+			b = &v2;
+			if(len2 > len1) {
+				a = &v2;
+				b = &v1;
+				len2 = len1;
 			}
-		}
-	}
 
-	if(SI_TYPE(v1) == T_NULL) {
-		v1 = SI_EmptyArray();
-	} else if(SI_TYPE(v1) != T_ARRAY) {
-		v1 = SI_Array(1);
-		SIArray_Append(&v1, argv[0]);
-	}
+			for (uint i = 0; i < len2; i++) {
+                SIValue elem = a->array[i];
+                if (SIArray_Contains(*b, elem) == false) {
+                    SIArray_Append(a, elem);
+                }
+            }
+			break;
+		// If a value appears x times in v1 and y times in v2, (x>0 or y>0) - it will appear max(x,y) times in the result.
+        case (1):	
+			// TO DO:
+			return SI_NullVal();
+            break;
+		// If a value appears x times in v1 and y times in v2, (x>0 or y>0) - it will appear x+y times in the result.
+        case (2):
+			len1 = SIArray_Length(v1);
+            len2 = SIArray_Length(v2);
+            
+			if(len2 > len1) {
+				a = &v2;
+				b = &v1;
+				len2 = len1;
+			}
 
-	if(SI_TYPE(v2) == T_NULL) {
-		v2 = SI_EmptyArray();
-	} else if(SI_TYPE(v2) != T_ARRAY) {
-		v2 = SI_Array(1);
-		SIArray_Append(&v1, argv[1]);
-	}
-
-	uint32_t len1 = SIArray_Length(v1);
-	uint32_t len2 = SIArray_Length(v2);
-
-	// TO DO:
-	// switch(dupPolicy){
-	// 	case(0):
-	// 		break;
-	// 	case(1):
-	// 		break;
-	// 	case(2):
-	// 		break;
-	// }
-
-	return SI_NullVal();
+            for (uint i = 0; i < len2; i++) {
+                SIValue elem = b->array[i];
+                SIArray_Append(a, elem);
+            }
+			break;
+    }
+	return *a;
 }
 
 // Given two lists, return their intersection (v1 ∩ v2).
@@ -558,26 +596,12 @@ SIValue AR_LIST_FLATTEN(SIValue *argv, int argc, void *private_data) {
 		}
 	}
 
-	SIValue newArray = SIArray_Flatten(array, levels);
-	return newArray;
+	return SIArray_Flatten(array, levels);
 }
 
 // Given a list, return a similar list after removing duplicate elements.
 SIValue AR_LIST_DEDUP(SIValue *argv, int argc, void *private_data) {
-	SIValue array 		= argv[0];
-	SIValue newArray 	= SIArray_New(0);
-	uint32_t arrayLen 	= SIArray_Length(array);
-
-	if(arrayLen == 0) return newArray;
-
-	for(uint i = 0; i < arrayLen; i++) {
-		SIValue elem	= SIArray_Get(array, i);
-
-		if(SIArray_Contains(newArray, elem) == false) {
-			SIArray_Append(&newArray, elem);
-		}
-	}
-	return newArray;
+	return SIArray_Dedup(argv[0]);
 }
 
 // Given a list, return a list with similar elements, but sorted.

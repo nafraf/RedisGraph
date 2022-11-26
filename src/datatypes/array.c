@@ -150,3 +150,19 @@ SIValue SIArray_Flatten(SIValue siarray, uint32_t levels) {
 	}
 	return newArray;
 }
+
+SIValue SIArray_Dedup(SIValue siarray) {
+	SIValue newArray 	= SIArray_New(0);
+	uint32_t arrayLen 	= SIArray_Length(siarray);
+
+	if(arrayLen == 0) return newArray;
+
+	for(uint i = 0; i < arrayLen; i++) {
+		SIValue elem	= siarray.array[i];
+
+		if(SIArray_Contains(newArray, elem) == false) {
+			SIArray_Append(&newArray, elem);
+		}
+	}
+	return newArray;
+}
