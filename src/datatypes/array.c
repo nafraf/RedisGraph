@@ -166,3 +166,18 @@ SIValue SIArray_Dedup(SIValue siarray) {
 	}
 	return newArray;
 }
+
+static inline int _SIValue_Compare
+(
+	const SIValue *a,
+	const SIValue *b
+) {
+	return SIValue_Compare(*a, *b, NULL);
+}
+
+SIValue SIArray_Sort(SIValue siarray) {
+	uint32_t arrayLen = SIArray_Length(siarray);
+	qsort(siarray.array, arrayLen, sizeof(SIValue),
+			(int(*)(const void*, const void*))_SIValue_Compare);
+	return siarray;
+}

@@ -673,8 +673,7 @@ SIValue AR_LIST_DEDUP(SIValue *argv, int argc, void *private_data) {
 
 // Given a list, return a list with similar elements, but sorted.
 SIValue AR_LIST_SORT(SIValue *argv, int argc, void *private_data) {
-	// TO DO:
-	return SI_NullVal();
+	return SIArray_Sort(argv[0]);
 }
 
 void Register_ListFuncs() {

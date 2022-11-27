@@ -111,3 +111,9 @@ SIValue SIArray_Flatten(SIValue siarray, uint32_t levels);
   */
 SIValue SIArray_Dedup(SIValue siarray);
 
+/**
+  * @brief  Return an array with similar elements, but sorted.
+  * @param  siarray: original array
+  * @retval Sorted array
+  */
+SIValue SIArray_Sort(SIValue siarray);
