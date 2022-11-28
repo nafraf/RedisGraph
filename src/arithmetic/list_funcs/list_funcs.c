@@ -675,6 +675,46 @@ SIValue AR_LIST_INTERSECTION(SIValue *argv, int argc, void *private_data) {
 			break;
 		// If a value appears x times in v1 and y times in v2 it will appear min(x, y) times in the result.
 		case (1):
+			v1 = SIArray_Sort(v1);
+			v2 = SIArray_Sort(v2);
+			len1 = SIArray_Length(v1);
+            len2 = SIArray_Length(v2);
+
+			uint i = 0;
+			uint j = 0;
+			while (i < len1 || j < len2) {
+				// Elements that exists only in A
+				while((i < len1) && (SIValue_Compare(a->array[i], b->array[j], NULL) < 0)) {
+					i++;
+				}
+				// Elements that exists only in B
+				while((j < len2) && (SIValue_Compare(a->array[i], b->array[j], NULL) > 0)) {
+					j++;
+				}
+				// Elements that exists in A and B
+				if((i < len1) && (SIValue_Compare(a->array[i], b->array[j], NULL) == 0)) {
+					SIValue elem = a->array[i];
+					while((i < len1) && (j < len2) && SIValue_Compare(a->array[i], b->array[j], NULL) == 0) {
+						SIArray_Append(&result, a->array[i]);
+						i++;
+						j++;
+					}
+					while((i < len1) && SIValue_Compare(a->array[i], elem, NULL) == 0) {
+						i++;
+					}
+					while((j < len2) && SIValue_Compare(b->array[j], elem, NULL) == 0) {
+						j++;
+					}
+				}
+				// Elements at last positions of A
+				if(i < len1 && j >= len2) {
+					i++;
+				}
+				// Elements at last positions of B
+				if(i >= len1 && j < len2) {
+					j++;
+				}
+			}
 			break;
 	}
 	return result;

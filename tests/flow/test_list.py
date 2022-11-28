@@ -897,8 +897,8 @@ class testList(FlowTestsBase):
             "RETURN list.intersection([0], [1], 0)": [[[]]],
             "RETURN list.intersection([1, 2, 3], [1, 2, 2, 3, 3, 3], 0)": [[[1, 2, 3]]],
             "RETURN list.intersection([1, 2, 2, 3, 3, 3], [1, 2, 3], 0)": [[[1, 2, 3]]],
-            # "RETURN list.intersection([1, 2, 3], [1, 2, 2, 3, 3, 3], 1)": [[[1, 2, 3]]],
-            # "RETURN list.intersection([1, 2, 2, 3, 3, 3], [1, 2, 3], 1)": [[[1, 2, 3]]], 
+            "RETURN list.intersection([1, 2, 3], [1, 2, 2, 3, 3, 3], 1)": [[[1, 2, 3]]],
+            "RETURN list.intersection([4, 5, 1, 2, 2, 3, 3, 3], [1, 2, 3], 1)": [[[1, 2, 3]]], 
         }
         for query, expected_result in query_to_expected_result.items():
             self.get_res_and_assertEquals(query, expected_result)
