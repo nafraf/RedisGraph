@@ -21,3 +21,12 @@ typedef struct {
 
 void Register_ListFuncs();
 
+#define preprocess_list_argument(arg, value) ({ \
+	if (SI_TYPE(arg) == T_NULL) {				\
+        value = SI_EmptyArray();				\
+    } else if (SI_TYPE(value) != T_ARRAY) {		\
+        value = SI_Array(1);					\
+        SIArray_Append(&value, arg);			\
+    }											\
+})
+

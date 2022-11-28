@@ -880,11 +880,20 @@ class testList(FlowTestsBase):
 
     def test12_list_union(self):
         query_to_expected_result = {
-            "RETURN list.union([], [], 0)": [[[]]],
-            "RETURN list.union([1, 2, 3], [1, 2, 2, 3, 3, 3], 0)": [[[1, 2, 3]]],
-            "RETURN list.union([1, 2, 2, 3, 3, 3], [1, 2, 3], 0)": [[[1, 2, 3]]],
+            # If a value appears x>0 times in v1 or y>0 times in v2 it will appear one time in the result.
+            "RETURN list.union([], [], 0)" : [[[]]],
+            "RETURN list.union([1, 2, 3], [1, 2, 2, 3, 3, 3], 0)" : [[[1, 2, 3]]],
+            "RETURN list.union([1, 2, 2, 3, 3, 3], [1, 2, 3], 0)" : [[[1, 2, 3]]],
+            "RETURN list.union([1, 'a', 'a', 'b'],'b', 0)" : [[[1, 'a', 'b']]],
+            "RETURN list.union('b', [1, 'a', 'a', 'b'], 0)" : [[[1, 'a', 'b']]],
+            # If a value appears x times in v1 and y times in v2, (x>0 or y>0) - it will appear max(x,y) times in the result.
+            "RETURN list.union([1, 'a', 'a', 'b'], 'b', 1)" : [[['a', 'a', 'b', 1]]],
+            "RETURN list.union('b', [1, 'a', 'a', 'b'], 1)" : [[['a', 'a', 'b', 1]]],
             "RETURN list.union([1, 2, 3], [1, 2, 2, 3, 3, 3], 1)": [[[1, 2, 2, 3, 3, 3]]],
             "RETURN list.union([4, 5, 1, 2, 2, 3, 3, 3], [1, 2, 3], 1)": [[[1, 2, 2, 3, 3, 3, 4, 5]]],
+            # If a value appears x times in v1 and y times in v2, (x>0 or y>0) - it will appear x+y times in the result.
+            "RETURN list.union([1, 'a', 'a', 'b'], 'b', 2)" : [[[1, 'a', 'a', 'b', 'b']]],
+            "RETURN list.union('b', [1, 'a', 'a', 'b'], 2)" : [[[1, 'a', 'a', 'b', 'b']]],
             "RETURN list.union([1, 2, 3], [1, 2, 2, 3, 3, 3], 2)": [[[1, 2, 2, 3, 3, 3, 1, 2, 3]]],
             "RETURN list.union([1, 2, 2, 3, 3, 3], [1, 2, 3], 2)": [[[1, 2, 2, 3, 3, 3, 1, 2, 3]]], 
         }
@@ -893,12 +902,16 @@ class testList(FlowTestsBase):
 
     def test13_list_intersection(self):
         query_to_expected_result = {
+            # If a value appears x>0 times in v1 and y>0 times in v2 it will appear one time in the result.
             "RETURN list.intersection([], [], 0)": [[[]]],
             "RETURN list.intersection([0], [1], 0)": [[[]]],
+            "RETURN list.intersection([0], 0, 0)": [[[0]]],
+            "RETURN list.intersection('a', ['a'], 0)": [[['a']]],
             "RETURN list.intersection([1, 2, 3], [1, 2, 2, 3, 3, 3], 0)": [[[1, 2, 3]]],
             "RETURN list.intersection([1, 2, 2, 3, 3, 3], [1, 2, 3], 0)": [[[1, 2, 3]]],
-            "RETURN list.intersection([1, 2, 3], [1, 2, 2, 3, 3, 3], 1)": [[[1, 2, 3]]],
-            "RETURN list.intersection([4, 5, 1, 2, 2, 3, 3, 3], [1, 2, 3], 1)": [[[1, 2, 3]]], 
+            # If a value appears x times in v1 and y times in v2 it will appear min(x, y) times in the result.
+            "RETURN list.intersection([1, 2, 3], [4, 1, 2, 2, 3, 3, 3], 1)": [[[1, 2, 3]]],
+            "RETURN list.intersection([4, 1, 2, 2, 3, 3, 3], [1, 2, 3], 1)": [[[1, 2, 3]]],
         }
         for query, expected_result in query_to_expected_result.items():
             self.get_res_and_assertEquals(query, expected_result)

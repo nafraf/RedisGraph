@@ -496,19 +496,8 @@ SIValue AR_LIST_UNION(SIValue *argv, int argc, void *private_data) {
         }
     }
 
-	if (SI_TYPE(argv[0]) == T_NULL) {
-        v1 = SI_EmptyArray();
-    } else if (SI_TYPE(v1) != T_ARRAY) {
-        v1 = SI_Array(1);
-        SIArray_Append(&v1, argv[0]);
-    }
-
-    if (SI_TYPE(argv[1]) == T_NULL) {
-        v2 = SI_EmptyArray();
-    } else if (SI_TYPE(v2) != T_ARRAY) {
-        v2 = SI_Array(1);
-        SIArray_Append(&v1, argv[1]);
-    }
+	preprocess_list_argument(argv[0], v1);
+	preprocess_list_argument(argv[1], v2);
 
 	SIValue* a = &v1;
 	SIValue* b = &v2;
@@ -529,9 +518,9 @@ SIValue AR_LIST_UNION(SIValue *argv, int argc, void *private_data) {
 				len2 = len1;
 			}
 
-			for (uint i = 0; i < len2; i++) {
-                SIValue elem = a->array[i];
-                if (SIArray_Contains(*b, elem) == false) {
+			for (uint j = 0; j < len2; j++) {
+                SIValue elem = b->array[j];
+                if (SIArray_Contains(*a, elem) == false) {
                     SIArray_Append(a, elem);
                 }
             }
@@ -632,19 +621,8 @@ SIValue AR_LIST_INTERSECTION(SIValue *argv, int argc, void *private_data) {
         }
     }
 
-	if (SI_TYPE(argv[0]) == T_NULL) {
-        v1 = SI_EmptyArray();
-    } else if (SI_TYPE(v1) != T_ARRAY) {
-        v1 = SI_Array(1);
-        SIArray_Append(&v1, argv[0]);
-    }
-
-    if (SI_TYPE(argv[1]) == T_NULL) {
-        v2 = SI_EmptyArray();
-    } else if (SI_TYPE(v2) != T_ARRAY) {
-        v2 = SI_Array(1);
-        SIArray_Append(&v1, argv[1]);
-    }
+	preprocess_list_argument(argv[0], v1);
+	preprocess_list_argument(argv[1], v2);
 
 	SIValue* a = &v1;
 	SIValue* b = &v2;
@@ -666,8 +644,8 @@ SIValue AR_LIST_INTERSECTION(SIValue *argv, int argc, void *private_data) {
 				len2 = len1;
 			}
 
-			for (uint i = 0; i < len2; i++) {
-                SIValue elem = b->array[i];
+			for (uint j = 0; j < len2; j++) {
+                SIValue elem = b->array[j];
                 if (SIArray_Contains(*a, elem)) {
 					SIArray_Append(&result, elem);
                 }
@@ -891,16 +869,16 @@ void Register_ListFuncs() {
 	AR_RegFunc(func_desc);
 
 	types = array_new(SIType, 3);
-	array_append(types, T_ARRAY | T_NULL);	// list1
-	array_append(types, T_ARRAY | T_NULL);	// list1
+	array_append(types, SI_ALL);			// v1
+	array_append(types, SI_ALL);			// v2
 	array_append(types, T_INT64 | T_NULL);	// dupPolicy
 	ret_type = T_ARRAY | T_NULL;
 	func_desc = AR_FuncDescNew("list.union", AR_LIST_UNION, 2, 3, types, ret_type, false, true);
 	AR_RegFunc(func_desc);
 
 	types = array_new(SIType, 3);
-	array_append(types, T_ARRAY | T_NULL);	// list1
-	array_append(types, T_ARRAY | T_NULL);	// list1
+	array_append(types, SI_ALL);			// v1
+	array_append(types, SI_ALL);			// v2
 	array_append(types, T_INT64 | T_NULL);	// dupPolicy
 	ret_type = T_ARRAY | T_NULL;
 	func_desc = AR_FuncDescNew("list.intersection", AR_LIST_INTERSECTION, 2, 3, types, ret_type, false, true);
