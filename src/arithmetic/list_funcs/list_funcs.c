@@ -564,12 +564,12 @@ SIValue AR_LIST_UNION(SIValue *argv, int argc, void *private_data) {
 						j++;
 					}
 				}
-				// Elements at last positions of A
+				// Remaining elements in A
 				if(i < len1 && j >= len2) {
 					SIArray_Append(&result, a->array[i]);
 					i++;
 				}
-				// Elements at last positions of B
+				// Remaining elements in B
 				if(i >= len1 && j < len2) {
 					SIArray_Append(&result, b->array[j]);
 					j++;
@@ -684,11 +684,11 @@ SIValue AR_LIST_INTERSECTION(SIValue *argv, int argc, void *private_data) {
 						j++;
 					}
 				}
-				// Elements at last positions of A
+				// Remaining elements in A
 				if(i < len1 && j >= len2) {
 					i++;
 				}
-				// Elements at last positions of B
+				// Remaining elements in B
 				if(i >= len1 && j < len2) {
 					j++;
 				}
@@ -700,8 +700,101 @@ SIValue AR_LIST_INTERSECTION(SIValue *argv, int argc, void *private_data) {
 
 // Given two lists, return their difference (v1 - v2).
 SIValue AR_LIST_DIFF(SIValue *argv, int argc, void *private_data) {
-	// TO DO:
-	return SI_NullVal();
+	uint32_t len1 = 0;
+    uint32_t len2 = 0;
+    SIValue v1 = argv[0];
+    SIValue v2 = argv[1];
+	SIValue result = SI_EmptyArray();
+
+    int64_t dupPolicy = 0;
+    if (argc == 3) {
+        if (SI_TYPE(argv[2]) != T_INT64) {
+            Error_SITypeMismatch(argv[1], T_INT64);
+            return SI_NullVal();
+        } else {
+            dupPolicy = argv[2].longval;
+            if (dupPolicy < 0 || dupPolicy > 2) {
+                ErrorCtx_RaiseRuntimeException(
+                    "Third argument must be an integer in [0..2]");
+                return SI_NullVal();
+            }
+        }
+    }
+
+	preprocess_list_argument(argv[0], v1);
+	preprocess_list_argument(argv[1], v2);
+
+	switch (dupPolicy) {
+    	// If a value appears at least once in v2 - it will not appear in the result.
+    	// If a value appears at least once in v1 and does not appear in v2 - it will appear once in the result.
+		case (0):
+			v1 = SIArray_Dedup(v1);
+			len1 = SIArray_Length(v1);
+			for (uint i = 0; i < len1; i++) {
+				SIValue elem = v1.array[i];
+                if (SIArray_Contains(v2, elem) == false) {
+					SIArray_Append(&result, elem);
+                }
+			}
+			break;
+		// If a value appears at least once in v2 - it will not appear in the result.
+		// If a value appears x times in v1 and does not appear in v2 - it will appear x times in the result.
+		case (1):
+			len1 = SIArray_Length(v1);
+			for (uint i = 0; i < len1; i++) {
+				SIValue elem = v1.array[i];
+                if (SIArray_Contains(v2, elem) == false) {
+					SIArray_Append(&result, elem);
+                }
+			}
+			break;
+		// If a value appears x times in v1 and y times in v2 - it will appear min(0, x-y) in the result.
+		case (2):
+			v1 = SIArray_Sort(v1);
+			v2 = SIArray_Sort(v2);
+			len1 = SIArray_Length(v1);
+            len2 = SIArray_Length(v2);
+
+			uint i = 0;
+			uint j = 0;
+			while (i < len1 || j < len2) {
+				// Elements that exists only in v1
+				while((i < len1) && (SIValue_Compare(v1.array[i], v2.array[j], NULL) < 0)) {
+					SIArray_Append(&result, v1.array[i]);
+					i++;
+				}
+				// Elements that exists only in v2
+				while((j < len2) && (SIValue_Compare(v1.array[i], v2.array[j], NULL) > 0)) {
+					j++;
+				}
+				// Elements that exists in v1 and v2
+				if((i < len1) && (SIValue_Compare(v1.array[i], v2.array[j], NULL) == 0)) {
+					SIValue elem = v1.array[i];
+					while((i < len1) && (j < len2) && SIValue_Compare(v1.array[i], v2.array[j], NULL) == 0) {
+						i++;
+						j++;
+					}
+					while((i < len1) && SIValue_Compare(v1.array[i], elem, NULL) == 0) {
+						SIArray_Append(&result, v1.array[i]);
+						i++;
+					}
+					while((j < len2) && SIValue_Compare(v2.array[j], elem, NULL) == 0) {
+						j++;
+					}
+				}
+				// Remaining elements in v1
+				if(i < len1 && j >= len2) {
+					SIArray_Append(&result, v1.array[i]);
+					i++;
+				}
+				// Remaining elements in v2
+				if(i >= len1 && j < len2) {
+					j++;
+				}
+			}
+			break;
+	}
+	return result;
 }
 
 // Given two lists, return their symmetric difference (AKA their disjunctive union) (v1 Δ v2).
@@ -885,16 +978,16 @@ void Register_ListFuncs() {
 	AR_RegFunc(func_desc);
 
 	types = array_new(SIType, 3);
-	array_append(types, T_ARRAY | T_NULL);	// list1
-	array_append(types, T_ARRAY | T_NULL);	// list1
+	array_append(types, SI_ALL);			// v1
+	array_append(types, SI_ALL);			// v2
 	array_append(types, T_INT64 | T_NULL);	// dupPolicy
 	ret_type = T_ARRAY | T_NULL;
 	func_desc = AR_FuncDescNew("list.diff", AR_LIST_DIFF, 2, 3, types, ret_type, false, true);
 	AR_RegFunc(func_desc);	
 
 	types = array_new(SIType, 3);
-	array_append(types, T_ARRAY | T_NULL);	// list1
-	array_append(types, T_ARRAY | T_NULL);	// list2
+	array_append(types, SI_ALL);			// v1
+	array_append(types, SI_ALL);			// v2
 	array_append(types, T_INT64 | T_NULL);	// dupPolicy
 	ret_type = T_ARRAY | T_NULL;
 	func_desc = AR_FuncDescNew("list.symDiff", AR_LIST_SYMDIFF, 2, 3, types, ret_type, false, true);

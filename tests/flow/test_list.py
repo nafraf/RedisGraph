@@ -915,3 +915,22 @@ class testList(FlowTestsBase):
         }
         for query, expected_result in query_to_expected_result.items():
             self.get_res_and_assertEquals(query, expected_result)
+
+    def test14_list_diff(self):
+        query_to_expected_result = {
+            # If a value appears at least once in v2 - it will not appear in the result.
+    	    # If a value appears at least once in v1 and does not appear in v2 - it will appear once in the result.
+            "RETURN list.diff([1, 1, 2, 2, 3], [], 0)": [[[1, 2, 3]]],
+            "RETURN list.diff([1, 1, 2, 2, 3], 1, 0)": [[[2, 3]]],
+            "RETURN list.diff([1, 1, 2, 2, 3], [1], 0)": [[[2, 3]]],
+            "RETURN list.diff([1, 1, 2, 2, 3], null, 0)": [[[1, 2, 3]]],
+            # If a value appears at least once in v2 - it will not appear in the result.
+		    # If a value appears x times in v1 and does not appear in v2 - it will appear x times in the result.
+            "RETURN list.diff([1, 1, 2, 2, 3], [], 1)": [[[1, 1, 2, 2, 3]]],
+            "RETURN list.diff([1, 1, 2, 2, 3], [1], 1)": [[[2, 2, 3]]],
+            # If a value appears x times in v1 and y times in v2 - it will appear min(0, x-y) in the result.
+            "RETURN list.diff([1, 1, 2, 2, 3], [], 2)": [[[1, 1, 2, 2, 3]]],
+            "RETURN list.diff([1, 1, 2, 2, 3], [1], 2)": [[[1, 2, 2, 3]]],
+        }
+        for query, expected_result in query_to_expected_result.items():
+            self.get_res_and_assertEquals(query, expected_result)
