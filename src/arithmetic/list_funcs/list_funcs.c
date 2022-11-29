@@ -799,8 +799,80 @@ SIValue AR_LIST_DIFF(SIValue *argv, int argc, void *private_data) {
 
 // Given two lists, return their symmetric difference (AKA their disjunctive union) (v1 Δ v2).
 SIValue AR_LIST_SYMDIFF(SIValue *argv, int argc, void *private_data) {
-	// TO DO:
-	return SI_NullVal();
+	uint32_t len1 = 0;
+    uint32_t len2 = 0;
+    SIValue v1 = argv[0];
+    SIValue v2 = argv[1];
+	SIValue result = SI_EmptyArray();
+
+    int64_t dupPolicy = 0;
+    if (argc == 3) {
+        if (SI_TYPE(argv[2]) != T_INT64) {
+            Error_SITypeMismatch(argv[1], T_INT64);
+            return SI_NullVal();
+        } else {
+            dupPolicy = argv[2].longval;
+            if (dupPolicy < 0 || dupPolicy > 1) {
+                ErrorCtx_RaiseRuntimeException(
+                    "Third argument must be an integer in [0..1]");
+                return SI_NullVal();
+            }
+        }
+    }
+
+	preprocess_list_argument(argv[0], v1);
+	preprocess_list_argument(argv[1], v2);
+
+	if(dupPolicy == 0) {
+		v1 = SIArray_Dedup(v1);
+		v2 = SIArray_Dedup(v2);
+	}
+
+	v1 = SIArray_Sort(v1);
+	v2 = SIArray_Sort(v2);
+	len1 = SIArray_Length(v1);
+	len2 = SIArray_Length(v2);
+
+	uint i = 0;
+	uint j = 0;
+	while (i < len1 || j < len2) {
+		// Elements that exists only in v1
+		while((i < len1) && (SIValue_Compare(v1.array[i], v2.array[j], NULL) < 0)) {
+			SIArray_Append(&result, v1.array[i]);
+			i++;
+		}
+		// Elements that exists only in v2
+		while((j < len2) && (SIValue_Compare(v1.array[i], v2.array[j], NULL) > 0)) {
+			j++;
+		}
+		// Elements that exists in v1 and v2
+		if((i < len1) && (SIValue_Compare(v1.array[i], v2.array[j], NULL) == 0)) {
+			SIValue elem = v1.array[i];
+			while((i < len1) && (j < len2) && SIValue_Compare(v1.array[i], v2.array[j], NULL) == 0) {
+				i++;
+				j++;
+			}
+			while((i < len1) && SIValue_Compare(v1.array[i], elem, NULL) == 0) {
+				SIArray_Append(&result, v1.array[i]);
+				i++;
+			}
+			while((j < len2) && SIValue_Compare(v2.array[j], elem, NULL) == 0) {
+				SIArray_Append(&result, v2.array[j]);
+				j++;
+			}
+		}
+		// Remaining elements in v1
+		if(i < len1 && j >= len2) {
+			SIArray_Append(&result, v1.array[i]);
+			i++;
+		}
+		// Remaining elements in v2
+		if(i >= len1 && j < len2) {
+			SIArray_Append(&result, v2.array[j]);
+			j++;
+		}
+	}
+	return result;
 }
 
 // Given a list, return a list where each element which is a list by itself is replaced with its members.
