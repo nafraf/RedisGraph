@@ -34,7 +34,7 @@ uint32_t SIArray_Length(SIValue siarray) {
 	return array_len(siarray.array);
 }
 
-bool SIArray_Contains(SIValue siarray, SIValue value) {
+bool SIArray_ContainsValue(SIValue siarray, SIValue value) {
 	uint array_len = SIArray_Length(siarray);
 	for(uint i = 0; i < array_len; i++) {
 		SIValue elem = SIArray_Get(siarray, i);
@@ -160,7 +160,7 @@ SIValue SIArray_Dedup(SIValue siarray) {
 	for(uint i = 0; i < arrayLen; i++) {
 		SIValue elem	= siarray.array[i];
 
-		if(SIArray_Contains(newArray, elem) == false) {
+		if(SIArray_ContainsValue(newArray, elem) == false) {
 			SIArray_Append(&newArray, elem);
 		}
 	}

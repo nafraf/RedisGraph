@@ -46,7 +46,7 @@ u_int32_t SIArray_Length(SIValue siarray);
   * @param  value: value to search for
   * @retval a boolean indicating whether value was found in siarray
   */
-bool SIArray_Contains(SIValue siarray, SIValue value);
+bool SIArray_ContainsValue(SIValue siarray, SIValue value);
 
 /**
   * @brief  Returns true if any of the types in 't' are contained in the array

@@ -520,7 +520,7 @@ SIValue AR_LIST_UNION(SIValue *argv, int argc, void *private_data) {
 
 			for (uint j = 0; j < len2; j++) {
                 SIValue elem = b->array[j];
-                if (SIArray_Contains(*a, elem) == false) {
+                if (SIArray_ContainsValue(*a, elem) == false) {
                     SIArray_Append(a, elem);
                 }
             }
@@ -646,7 +646,7 @@ SIValue AR_LIST_INTERSECTION(SIValue *argv, int argc, void *private_data) {
 
 			for (uint j = 0; j < len2; j++) {
                 SIValue elem = b->array[j];
-                if (SIArray_Contains(*a, elem)) {
+                if (SIArray_ContainsValue(*a, elem)) {
 					SIArray_Append(&result, elem);
                 }
             }
@@ -732,7 +732,7 @@ SIValue AR_LIST_DIFF(SIValue *argv, int argc, void *private_data) {
 			len1 = SIArray_Length(v1);
 			for (uint i = 0; i < len1; i++) {
 				SIValue elem = v1.array[i];
-                if (SIArray_Contains(v2, elem) == false) {
+                if (SIArray_ContainsValue(v2, elem) == false) {
 					SIArray_Append(&result, elem);
                 }
 			}
@@ -743,7 +743,7 @@ SIValue AR_LIST_DIFF(SIValue *argv, int argc, void *private_data) {
 			len1 = SIArray_Length(v1);
 			for (uint i = 0; i < len1; i++) {
 				SIValue elem = v1.array[i];
-                if (SIArray_Contains(v2, elem) == false) {
+                if (SIArray_ContainsValue(v2, elem) == false) {
 					SIArray_Append(&result, elem);
                 }
 			}
