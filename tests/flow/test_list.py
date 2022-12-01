@@ -862,9 +862,9 @@ class testList(FlowTestsBase):
 
     def test11_list_dedup(self):
         query_to_expected_result = {
-            "RETURN list.dedup(null)": [[[]]], 
-            "RETURN list.dedup([1, 2, 3, true])": [[[1, 2, 3, True]]],
-            "RETURN list.dedup([1, null, 2, 3, null, 2, 'a', 'b', 'a'])": [[[1, None, 2, 3, 'a', 'b']]],
+            "RETURN list.dedup(null)" : [[[]]], 
+            "RETURN list.dedup([1, 2, 3, true])" : [[[1, 2, 3, True]]],
+            "RETURN list.dedup([1, null, 2, 3, null, 2, 'a', 'b', 'a'])" : [[[1, None, 2, 3, 'a', 'b']]],
         }
         for query, expected_result in query_to_expected_result.items():
             self.get_res_and_assertEquals(query, expected_result)
@@ -903,15 +903,15 @@ class testList(FlowTestsBase):
     def test13_list_intersection(self):
         query_to_expected_result = {
             # If a value appears x>0 times in v1 and y>0 times in v2 it will appear one time in the result.
-            "RETURN list.intersection([], [], 0)": [[[]]],
-            "RETURN list.intersection([0], [1], 0)": [[[]]],
-            "RETURN list.intersection([0], 0, 0)": [[[0]]],
-            "RETURN list.intersection('a', ['a'], 0)": [[['a']]],
-            "RETURN list.intersection([1, 2, 3], [1, 2, 2, 3, 3, 3], 0)": [[[1, 2, 3]]],
-            "RETURN list.intersection([1, 2, 2, 3, 3, 3], [1, 2, 3], 0)": [[[1, 2, 3]]],
+            "RETURN list.intersection([], [], 0)" : [[[]]],
+            "RETURN list.intersection([0], [1], 0)" : [[[]]],
+            "RETURN list.intersection([0], 0, 0)" : [[[0]]],
+            "RETURN list.intersection('a', ['a'], 0)" : [[['a']]],
+            "RETURN list.intersection([1, 2, 3], [1, 2, 2, 3, 3, 3], 0)" : [[[1, 2, 3]]],
+            "RETURN list.intersection([1, 2, 2, 3, 3, 3], [1, 2, 3], 0)" : [[[1, 2, 3]]],
             # If a value appears x times in v1 and y times in v2 it will appear min(x, y) times in the result.
-            "RETURN list.intersection([1, 2, 3], [4, 1, 2, 2, 3, 3, 3], 1)": [[[1, 2, 3]]],
-            "RETURN list.intersection([4, 1, 2, 2, 3, 3, 3], [1, 2, 3], 1)": [[[1, 2, 3]]],
+            "RETURN list.intersection([1, 2, 3], [4, 1, 2, 2, 3, 3, 3], 1)" : [[[1, 2, 3]]],
+            "RETURN list.intersection([4, 1, 2, 2, 3, 3, 3], [1, 2, 3], 1)" : [[[1, 2, 3]]],
         }
         for query, expected_result in query_to_expected_result.items():
             self.get_res_and_assertEquals(query, expected_result)
@@ -920,17 +920,17 @@ class testList(FlowTestsBase):
         query_to_expected_result = {
             # If a value appears at least once in v2 - it will not appear in the result.
     	    # If a value appears at least once in v1 and does not appear in v2 - it will appear once in the result.
-            "RETURN list.diff([1, 1, 2, 2, 3], 1, 0)": [[[2, 3]]],
-            "RETURN list.diff([1, 1, 2, 2, 3], [1], 0)": [[[2, 3]]],
-            "RETURN list.diff([1, 1, 2, 2, 3], [], 0)": [[[1, 2, 3]]],
-            "RETURN list.diff([1, 1, 2, 2, 3], null, 0)": [[[1, 2, 3]]],
+            "RETURN list.diff([1, 1, 2, 2, 3], 1, 0)" : [[[2, 3]]],
+            "RETURN list.diff([1, 1, 2, 2, 3], [1], 0)" : [[[2, 3]]],
+            "RETURN list.diff([1, 1, 2, 2, 3], [], 0)" : [[[1, 2, 3]]],
+            "RETURN list.diff([1, 1, 2, 2, 3], null, 0)" : [[[1, 2, 3]]],
             # If a value appears at least once in v2 - it will not appear in the result.
 		    # If a value appears x times in v1 and does not appear in v2 - it will appear x times in the result.
-            "RETURN list.diff([1, 1, 2, 2, 3], [1], 1)": [[[2, 2, 3]]],
-            "RETURN list.diff([1, 1, 2, 2, 3], [], 1)": [[[1, 1, 2, 2, 3]]],
+            "RETURN list.diff([1, 1, 2, 2, 3], [1], 1)" : [[[2, 2, 3]]],
+            "RETURN list.diff([1, 1, 2, 2, 3], [], 1)" : [[[1, 1, 2, 2, 3]]],
             # If a value appears x times in v1 and y times in v2 - it will appear min(0, x-y) in the result.
-            "RETURN list.diff([1, 1, 2, 2, 3], [1], 2)": [[[1, 2, 2, 3]]],
-            "RETURN list.diff([1, 1, 2, 2, 3], [], 2)": [[[1, 1, 2, 2, 3]]],
+            "RETURN list.diff([1, 1, 2, 2, 3], [1], 2)" : [[[1, 2, 2, 3]]],
+            "RETURN list.diff([1, 1, 2, 2, 3], [], 2)" : [[[1, 1, 2, 2, 3]]],
         }
         for query, expected_result in query_to_expected_result.items():
             self.get_res_and_assertEquals(query, expected_result)
@@ -939,17 +939,27 @@ class testList(FlowTestsBase):
         query_to_expected_result = {
             # If a value appears at least once in v1 and at least once in v2 - it will not appear in the result.
 		    # If a value appears at least once in one of the lists and does not appear in the other - it will appear once in the result.
-            "RETURN list.symDiff([1, 1, 2, 2, 3], 1, 0)": [[[2, 3]]],
-            "RETURN list.diff([1, 1, 2, 2, 3], null, 0)": [[[1, 2, 3]]],
-            "RETURN list.symDiff([1, 1, 2, 2, 3], [], 0)": [[[1, 2, 3]]],
-            "RETURN list.symDiff([1, 1, 2, 2, 3], [1, 4, 4], 0)": [[[2, 3, 4]]],
-            "RETURN list.symDiff([1, 1, 2, 2, 3], [null, 4], 0)": [[[1, 2, 3, 4, None]]],
+            "RETURN list.symDiff([1, 1, 2, 2, 3], 1, 0)" : [[[2, 3]]],
+            # "RETURN list.diff([1, 1, 2, 2, 3], null, 0)" : [[[1, 2, 3]]],
+            # "RETURN list.symDiff([1, 1, 2, 2, 3], [], 0)" : [[[1, 2, 3]]],
+            # "RETURN list.symDiff([1, 1, 2, 2, 3], [1, 4, 4], 0)" : [[[2, 3, 4]]],
+            # "RETURN list.symDiff([1, 1, 2, 2, 3], [null, 4], 0)" : [[[1, 2, 3, 4, None]]],
             # If a value appears x times in v1 and y times in v2 - it will appear max(x,y)-min(x,y) times in the result.
-            "RETURN list.symDiff([1, 1, 2, 2, 3], 1, 1)": [[[1, 2, 2, 3]]],
-            "RETURN list.symDiff([1, 1, 2, 2, 3], null, 1)": [[[1, 1, 2, 2, 3]]],
-            "RETURN list.symDiff([1, 1, 2, 2, 3], [1], 1)": [[[1, 2, 2, 3]]],
-            "RETURN list.symDiff([1, 1, 2, 2, 3], [], 1)": [[[1, 1, 2, 2, 3]]],
-            "RETURN list.symDiff([1, 1, 2, 2, 3], [1, 4, 4], 1)": [[[1, 2, 2, 3, 4, 4]]],
+            # "RETURN list.symDiff([1, 1, 2, 2, 3], 1, 1)" : [[[1, 2, 2, 3]]],
+            # "RETURN list.symDiff([1, 1, 2, 2, 3], null, 1)" : [[[1, 1, 2, 2, 3]]],
+            # "RETURN list.symDiff([1, 1, 2, 2, 3], [1], 1)" : [[[1, 2, 2, 3]]],
+            # "RETURN list.symDiff([1, 1, 2, 2, 3], [], 1)" : [[[1, 1, 2, 2, 3]]],
+            # "RETURN list.symDiff([1, 1, 2, 2, 3], [1, 4, 4], 1)" : [[[1, 2, 2, 3, 4, 4]]],
+        }
+        for query, expected_result in query_to_expected_result.items():
+            self.get_res_and_assertEquals(query, expected_result)
+
+    def test16_list_insert(self):
+        query_to_expected_result = {
+            "RETURN list.insert([1, 2, 3], 3, 1, 2, false)" : [[[1, 2, 3]]],
+            "RETURN list.insert([1, 2, 3], 3, 1, 2, true)" : [[[1, 3, 3, 2, 3]]],
+            "RETURN list.insert([1, 2, 3], [4, 5, 6] , 0, 1)" : [[[[4, 5, 6], 1, 2, 3]]],
+            "RETURN list.insert([1, 2, 3], [4, 5, 6] , -1, 2)" : [[[1, 2, 3, [4, 5, 6], [4, 5, 6]]]],
         }
         for query, expected_result in query_to_expected_result.items():
             self.get_res_and_assertEquals(query, expected_result)
