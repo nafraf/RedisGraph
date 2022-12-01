@@ -456,8 +456,73 @@ SIValue AR_REDUCE
 
 // Given a list, return a list after inserting a given value a given number of times at a given index.
 SIValue AR_LIST_INSERT(SIValue *argv, int argc, void *private_data) {
-	// TO DO:
-	return SI_NullVal();
+    SIValue list 	= argv[0];
+    SIValue val 	= argv[1];
+	int32_t idx 	= -1;
+	uint32_t count 	= 1;
+	bool dups 		= false;
+
+	uint32_t len 	= SIArray_Length(list);
+	SIValue result 	= SI_EmptyArray();
+
+	if (argc > 2) {
+        if (SI_TYPE(argv[2]) != T_INT64) {
+            Error_SITypeMismatch(argv[2], T_INT64);
+            return SI_NullVal();
+        } else {
+            idx = argv[2].longval;
+			if ((idx < (-1 * (int32_t)len)) || (idx > (int32_t)len)) {
+				ErrorCtx_RaiseRuntimeException(
+					"Third argument must be an integer in [-NumItems .. NumItems-1]");
+				return SI_NullVal();
+			}
+        }
+    }
+
+	if (argc > 3) {
+        if (SI_TYPE(argv[3]) != T_INT64) {
+            Error_SITypeMismatch(argv[3], T_INT64);
+            return SI_NullVal();
+        } else {
+            count = argv[3].longval;
+            if (count < 0) {
+                ErrorCtx_RaiseRuntimeException(
+                    "Third argument must be a non-negative integer");
+                return SI_NullVal();
+            }
+        }
+    }
+
+    if (argc > 4) {
+        if (SI_TYPE(argv[4]) != T_BOOL) {
+            Error_SITypeMismatch(argv[4], T_BOOL);
+            return SI_NullVal();
+        } else {
+            dups = SIValue_IsTrue(argv[4]);
+        }
+    }
+
+	if(!dups && SIArray_ContainsValue(list, val)) {
+		result = list;
+	} else {
+		if(idx < 0) idx = (int32_t)len + 1 + idx;
+
+		for(uint i = 0; i < len; i++) {
+			if(i == idx) {
+				while(count-- > 0) {
+					SIArray_Append(&result, val);
+				}
+			}
+			SIArray_Append(&result, SIArray_Get(list, i));
+		}
+		if(len == idx) {
+			while(count-- > 0) {
+				SIArray_Append(&result, val);
+			}
+		}
+	}
+
+	return result;
 }
 
 // Given a list, return a list after inserting the elements of a second list a given number of times at a given index.
@@ -519,7 +584,7 @@ SIValue AR_LIST_UNION(SIValue *argv, int argc, void *private_data) {
 			}
 
 			for (uint j = 0; j < len2; j++) {
-                SIValue elem = b->array[j];
+                SIValue elem = SIArray_Get(*b, j);
                 if (SIArray_ContainsValue(*a, elem) == false) {
                     SIArray_Append(a, elem);
                 }
@@ -539,39 +604,39 @@ SIValue AR_LIST_UNION(SIValue *argv, int argc, void *private_data) {
 			while (i < len1 || j < len2) {
 				// Elements that exists only in A
 				while((i < len1) && (SIValue_Compare(a->array[i], b->array[j], NULL) < 0)) {
-					SIArray_Append(&result, a->array[i]);
+					SIArray_Append(&result, SIArray_Get(*a, i));
 					i++;
 				}
 				// Elements that exists only in B
 				while((j < len2) && (SIValue_Compare(a->array[i], b->array[j], NULL) > 0)) {
-					SIArray_Append(&result, b->array[j]);
+					SIArray_Append(&result, SIArray_Get(*b, j));
 					j++;
 				}
 				// Elements that exists in A and B
 				if((i < len1) && (SIValue_Compare(a->array[i], b->array[j], NULL) == 0)) {
 					SIValue elem = a->array[i];
 					while((i < len1) && (j < len2) && SIValue_Compare(a->array[i], b->array[j], NULL) == 0) {
-						SIArray_Append(&result, a->array[i]);
+						SIArray_Append(&result, SIArray_Get(*a, i));
 						i++;
 						j++;
 					}
 					while((i < len1) && SIValue_Compare(a->array[i], elem, NULL) == 0) {
-						SIArray_Append(&result, a->array[i]);
+						SIArray_Append(&result, SIArray_Get(*a, i));
 						i++;
 					}
 					while((j < len2) && SIValue_Compare(b->array[j], elem, NULL) == 0) {
-						SIArray_Append(&result, b->array[j]);
+						SIArray_Append(&result, SIArray_Get(*b, j));
 						j++;
 					}
 				}
 				// Remaining elements in A
 				if(i < len1 && j >= len2) {
-					SIArray_Append(&result, a->array[i]);
+					SIArray_Append(&result, SIArray_Get(*a, i));
 					i++;
 				}
 				// Remaining elements in B
 				if(i >= len1 && j < len2) {
-					SIArray_Append(&result, b->array[j]);
+					SIArray_Append(&result, SIArray_Get(*b, j));
 					j++;
 				}
 			}
@@ -589,8 +654,8 @@ SIValue AR_LIST_UNION(SIValue *argv, int argc, void *private_data) {
 				len2 = len1;
 			}
 
-            for (uint i = 0; i < len2; i++) {
-                SIValue elem = b->array[i];
+            for (uint j = 0; j < len2; j++) {
+                SIValue elem = SIArray_Get(*b, j);
                 SIArray_Append(a, elem);
             }
 			break;
@@ -645,7 +710,7 @@ SIValue AR_LIST_INTERSECTION(SIValue *argv, int argc, void *private_data) {
 			}
 
 			for (uint j = 0; j < len2; j++) {
-                SIValue elem = b->array[j];
+                SIValue elem = SIArray_Get(*b, j);
                 if (SIArray_ContainsValue(*a, elem)) {
 					SIArray_Append(&result, elem);
                 }
@@ -673,7 +738,7 @@ SIValue AR_LIST_INTERSECTION(SIValue *argv, int argc, void *private_data) {
 				if((i < len1) && (SIValue_Compare(a->array[i], b->array[j], NULL) == 0)) {
 					SIValue elem = a->array[i];
 					while((i < len1) && (j < len2) && SIValue_Compare(a->array[i], b->array[j], NULL) == 0) {
-						SIArray_Append(&result, a->array[i]);
+						SIArray_Append(&result, SIArray_Get(*a, i));
 						i++;
 						j++;
 					}
@@ -731,7 +796,7 @@ SIValue AR_LIST_DIFF(SIValue *argv, int argc, void *private_data) {
 			v1 = SIArray_Dedup(v1);
 			len1 = SIArray_Length(v1);
 			for (uint i = 0; i < len1; i++) {
-				SIValue elem = v1.array[i];
+				SIValue elem = SIArray_Get(v1, i);
                 if (SIArray_ContainsValue(v2, elem) == false) {
 					SIArray_Append(&result, elem);
                 }
@@ -742,7 +807,7 @@ SIValue AR_LIST_DIFF(SIValue *argv, int argc, void *private_data) {
 		case (1):
 			len1 = SIArray_Length(v1);
 			for (uint i = 0; i < len1; i++) {
-				SIValue elem = v1.array[i];
+				SIValue elem = SIArray_Get(v1, i);
                 if (SIArray_ContainsValue(v2, elem) == false) {
 					SIArray_Append(&result, elem);
                 }
@@ -760,7 +825,7 @@ SIValue AR_LIST_DIFF(SIValue *argv, int argc, void *private_data) {
 			while (i < len1 || j < len2) {
 				// Elements that exists only in v1
 				while((i < len1) && (SIValue_Compare(v1.array[i], v2.array[j], NULL) < 0)) {
-					SIArray_Append(&result, v1.array[i]);
+					SIArray_Append(&result, SIArray_Get(v1, i));
 					i++;
 				}
 				// Elements that exists only in v2
@@ -775,7 +840,7 @@ SIValue AR_LIST_DIFF(SIValue *argv, int argc, void *private_data) {
 						j++;
 					}
 					while((i < len1) && SIValue_Compare(v1.array[i], elem, NULL) == 0) {
-						SIArray_Append(&result, v1.array[i]);
+						SIArray_Append(&result, SIArray_Get(v1, i));
 						i++;
 					}
 					while((j < len2) && SIValue_Compare(v2.array[j], elem, NULL) == 0) {
@@ -784,7 +849,7 @@ SIValue AR_LIST_DIFF(SIValue *argv, int argc, void *private_data) {
 				}
 				// Remaining elements in v1
 				if(i < len1 && j >= len2) {
-					SIArray_Append(&result, v1.array[i]);
+					SIArray_Append(&result, SIArray_Get(v1, i));
 					i++;
 				}
 				// Remaining elements in v2
@@ -824,12 +889,20 @@ SIValue AR_LIST_SYMDIFF(SIValue *argv, int argc, void *private_data) {
 	preprocess_list_argument(argv[1], v2);
 
 	if(dupPolicy == 0) {
-		v1 = SIArray_Dedup(v1);
-		v2 = SIArray_Dedup(v2);
+		SIValue v3 = SIArray_Clone(v1);
+		SIValue v4 = SIArray_Clone(v2);
+		v1 = SIArray_Dedup(v3);
+		v2 = SIArray_Dedup(v4);
+		SIArray_Free(v3);
+		SIArray_Free(v4);
 	}
 
-	v1 = SIArray_Sort(v1);
-	v2 = SIArray_Sort(v2);
+	SIValue v3 = SIArray_Clone(v1);
+	SIValue v4 = SIArray_Clone(v2);
+	v1 = SIArray_Sort(v3);
+	v2 = SIArray_Sort(v4);
+	SIArray_Free(v3);
+	SIArray_Free(v4);
 	len1 = SIArray_Length(v1);
 	len2 = SIArray_Length(v2);
 
@@ -838,7 +911,7 @@ SIValue AR_LIST_SYMDIFF(SIValue *argv, int argc, void *private_data) {
 	while (i < len1 || j < len2) {
 		// Elements that exists only in v1
 		while((i < len1) && (SIValue_Compare(v1.array[i], v2.array[j], NULL) < 0)) {
-			SIArray_Append(&result, v1.array[i]);
+			SIArray_Append(&result, SIArray_Get(v1, i));
 			i++;
 		}
 		// Elements that exists only in v2
@@ -853,22 +926,22 @@ SIValue AR_LIST_SYMDIFF(SIValue *argv, int argc, void *private_data) {
 				j++;
 			}
 			while((i < len1) && SIValue_Compare(v1.array[i], elem, NULL) == 0) {
-				SIArray_Append(&result, v1.array[i]);
+				SIArray_Append(&result, SIArray_Get(v1, i));
 				i++;
 			}
 			while((j < len2) && SIValue_Compare(v2.array[j], elem, NULL) == 0) {
-				SIArray_Append(&result, v2.array[j]);
+				SIArray_Append(&result, SIArray_Get(v2, j));
 				j++;
 			}
 		}
 		// Remaining elements in v1
-		if(i < len1 && j >= len2) {
-			SIArray_Append(&result, v1.array[i]);
+		if(i < len1 && j == len2) {
+			SIArray_Append(&result, SIArray_Get(v1, i));
 			i++;
 		}
 		// Remaining elements in v2
-		if(i >= len1 && j < len2) {
-			SIArray_Append(&result, v2.array[j]);
+		if(i == len1 && j < len2) {
+			SIArray_Append(&result, SIArray_Get(v2, j));
 			j++;
 		}
 	}

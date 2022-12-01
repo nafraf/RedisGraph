@@ -137,14 +137,15 @@ SIValue SIArray_Flatten(SIValue siarray, uint32_t levels) {
 	uint arrayLen 		= SIArray_Length(siarray);
 	SIValue newArray 	= SIArray_New(arrayLen);
 	for(uint i = 0; i < arrayLen; i++) {
-		SIValue value = siarray.array[i];
+		SIValue value = SIArray_Get(siarray, i);
 		if ((SI_TYPE(value) != T_ARRAY) || levels < 1) {
 			SIArray_Append(&newArray, value);
 		} else {
 			SIValue innerArray = SIArray_Flatten(value, levels - 1);
 			uint innerArrayLen = SIArray_Length(innerArray);
 			for(uint j = 0; j < innerArrayLen; j++) {
-				SIArray_Append(&newArray, innerArray.array[j]);
+				SIValue innerVal = SIArray_Get(innerArray, j);
+				SIArray_Append(&newArray, innerVal);
 			}	
 		}
 	}
@@ -158,8 +159,7 @@ SIValue SIArray_Dedup(SIValue siarray) {
 	if(arrayLen == 0) return newArray;
 
 	for(uint i = 0; i < arrayLen; i++) {
-		SIValue elem	= siarray.array[i];
-
+		SIValue elem = SIArray_Get(siarray, i);
 		if(SIArray_ContainsValue(newArray, elem) == false) {
 			SIArray_Append(&newArray, elem);
 		}
@@ -176,8 +176,9 @@ static inline int _SIValue_Compare
 }
 
 SIValue SIArray_Sort(SIValue siarray) {
-	uint32_t arrayLen = SIArray_Length(siarray);
-	qsort(siarray.array, arrayLen, sizeof(SIValue),
+	SIValue newArray = SIArray_Clone(siarray);
+	uint32_t arrayLen = SIArray_Length(newArray);
+	qsort(newArray.array, arrayLen, sizeof(SIValue),
 			(int(*)(const void*, const void*))_SIValue_Compare);
-	return siarray;
+	return newArray;
 }
