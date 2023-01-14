@@ -1,8 +1,8 @@
 /*
-* Copyright 2018-2022 Redis Labs Ltd. and Contributors
-*
-* This file is available under the Redis Labs Source Available License Agreement
-*/
+ * Copyright Redis Ltd. 2018 - present
+ * Licensed under your choice of the Redis Source Available License 2.0 (RSALv2) or
+ * the Server Side Public License v1 (SSPLv1).
+ */
 
 #include "query_ctx.h"
 #include "RG.h"
@@ -91,11 +91,6 @@ void QueryCtx_SetParams(rax *params) {
 	ctx->query_data.params = params;
 }
 
-void QueryCtx_SetLastWriter(OpBase *last_writer) {
-	QueryCtx *ctx = _QueryCtx_GetCreateCtx();
-	ctx->internal_exec_ctx.last_writer = last_writer;
-}
-
 AST *QueryCtx_GetAST(void) {
 	QueryCtx *ctx = _QueryCtx_GetCtx();
 	ASSERT(ctx != NULL);
@@ -156,13 +151,15 @@ static void _QueryCtx_ThreadSafeContextUnlock(QueryCtx *ctx) {
 bool QueryCtx_LockForCommit(void) {
 	QueryCtx *ctx = _QueryCtx_GetCreateCtx();
 	if(ctx->internal_exec_ctx.locked_for_commit) return true;
-	// Lock GIL.
+
+	// lock GIL
 	RedisModuleCtx *redis_ctx = ctx->global_exec_ctx.redis_ctx;
 	GraphContext *gc = ctx->gc;
 	RedisModuleString *graphID = RedisModule_CreateString(redis_ctx, gc->graph_name,
 														  strlen(gc->graph_name));
 	_QueryCtx_ThreadSafeContextLock(ctx);
-	// Open key and verify.
+
+	// open key and verify
 	RedisModuleKey *key = RedisModule_OpenKey(redis_ctx, graphID, REDISMODULE_WRITE);
 	RedisModule_FreeString(redis_ctx, graphID);
 	if(RedisModule_KeyType(key) == REDISMODULE_KEYTYPE_EMPTY) {
@@ -179,21 +176,23 @@ bool QueryCtx_LockForCommit(void) {
 		goto clean_up;
 	}
 	ctx->internal_exec_ctx.key = key;
-	// Acquire graph write lock.
+
+	// acquire graph write lock
 	Graph_AcquireWriteLock(gc->g);
 	ctx->internal_exec_ctx.locked_for_commit = true;
 
 	return true;
 
 clean_up:
-	// Free key handle.
+	// free key handle
 	RedisModule_CloseKey(key);
-	// Unlock GIL.
+
+	// unlock GIL
 	_QueryCtx_ThreadSafeContextUnlock(ctx);
-	// If there is a break point for runtime exception, raise it, otherwise return false.
+
+	// if there is a break point for runtime exception, raise it, otherwise return false
 	ErrorCtx_RaiseRuntimeException(NULL);
 	return false;
-
 }
 
 static void _QueryCtx_UnlockCommit(QueryCtx *ctx) {
@@ -210,25 +209,6 @@ static void _QueryCtx_UnlockCommit(QueryCtx *ctx) {
 	_QueryCtx_ThreadSafeContextUnlock(ctx);
 }
 
-void QueryCtx_UnlockCommit(OpBase *writer_op) {
-	QueryCtx *ctx = _QueryCtx_GetCtx();
-	if(!ctx) {
-		return;
-	}
-
-	// check that the writer_op is entitled to release the lock.
-	if(writer_op != NULL && ctx->internal_exec_ctx.last_writer != writer_op) {
-		return;
-	}
-
-	// for safety, already unlocked?
-	if(!ctx->internal_exec_ctx.locked_for_commit) {
-		return;
-	}
-
-	_QueryCtx_UnlockCommit(ctx);
-}
-
 // replicate command
 void QueryCtx_Replicate
 (
@@ -239,28 +219,17 @@ void QueryCtx_Replicate
 	GraphContext   *gc        = ctx->gc;
 	RedisModuleCtx *redis_ctx = ctx->global_exec_ctx.redis_ctx;
 
-	// replication requires GIL
-	_QueryCtx_ThreadSafeContextLock(ctx);
-
 	// replicate
 	RedisModule_Replicate(redis_ctx, ctx->global_exec_ctx.command_name,
 			"cc!", gc->graph_name, ctx->query_data.query);
-
-	// release GIL
-	_QueryCtx_ThreadSafeContextUnlock(ctx);
 }
 
-void QueryCtx_ForceUnlockCommit() {
+void QueryCtx_UnlockCommit() {
 	QueryCtx *ctx = _QueryCtx_GetCtx();
 	if(!ctx) return;
 
 	// already unlocked?
 	if(!ctx->internal_exec_ctx.locked_for_commit) return;
-
-	RedisModuleCtx *redis_ctx = ctx->global_exec_ctx.redis_ctx;
-	RedisModule_Log(redis_ctx, "warning",
-					"RedisGraph used forced unlocking commit flow for the query %s",
-					ctx->query_data.query);
 
 	_QueryCtx_UnlockCommit(ctx);
 }

@@ -1,8 +1,8 @@
 /*
-* Copyright 2018-2022 Redis Labs Ltd. and Contributors
-*
-* This file is available under the Redis Labs Source Available License Agreement
-*/
+ * Copyright Redis Ltd. 2018 - present
+ * Licensed under your choice of the Redis Source Available License 2.0 (RSALv2) or
+ * the Server Side Public License v1 (SSPLv1).
+ */
 
 #include "filter_tree_utils.h"
 #include "RG.h"
@@ -82,7 +82,7 @@ bool extractOriginAndRadius(const FT_FilterNode *filter, SIValue *origin,
 
 // return true if filter performs distance filtering
 // distance(n.location, point({lat:1.1, lon:2.2})) < 40
-bool isDistanceFilter(FT_FilterNode *filter) {
+bool isDistanceFilter(const FT_FilterNode *filter) {
 	bool res = extractOriginAndRadius(filter, NULL, NULL, NULL);
 	if(res) {
 		ASSERT(filter->t == FT_N_PRED);

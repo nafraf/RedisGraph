@@ -1,8 +1,8 @@
 /*
-* Copyright 2018-2022 Redis Labs Ltd. and Contributors
-*
-* This file is available under the Redis Labs Source Available License Agreement
-*/
+ * Copyright Redis Ltd. 2018 - present
+ * Licensed under your choice of the Redis Source Available License 2.0 (RSALv2) or
+ * the Server Side Public License v1 (SSPLv1).
+ */
 
 #include "RG.h"
 #include "config.h"
@@ -198,7 +198,11 @@ static bool Config_enforce_timeout_max
 ) {
 	if(timeout_max != CONFIG_TIMEOUT_NO_TIMEOUT &&
 	   timeout_default > timeout_max) {
+#ifdef __aarch64__
 		RedisModule_Log(NULL, "warning", "The TIMEOUT_DEFAULT(%lld) configuration parameter value is higher than TIMEOUT_MAX(%lld).", timeout_default, timeout_max);
+#else
+		RedisModule_Log(NULL, "warning", "The TIMEOUT_DEFAULT(%ld) configuration parameter value is higher than TIMEOUT_MAX(%ld).", timeout_default, timeout_max);
+#endif
 		return false;
 	}
 	

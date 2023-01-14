@@ -1,8 +1,8 @@
 /*
-* Copyright 2018-2022 Redis Labs Ltd. and Contributors
-*
-* This file is available under the Redis Labs Source Available License Agreement
-*/
+ * Copyright Redis Ltd. 2018 - present
+ * Licensed under your choice of the Redis Source Available License 2.0 (RSALv2) or
+ * the Server Side Public License v1 (SSPLv1).
+ */
 
 #include <stdio.h>
 #include <signal.h>
@@ -55,7 +55,8 @@ void InfoFunc(RedisModuleInfoCtx *ctx, int for_crash_report) {
 	for(int i = 0; i < nthreads; i++) {
 		CommandCtx *cmd = command_ctxs[i];
 		if(cmd != NULL) {
-			asprintf(&command_desc, "%s %s", cmd->command_name, cmd->query);
+			int rc __attribute__((unused));
+			rc = asprintf(&command_desc, "%s %s", cmd->command_name, cmd->query);
 			RedisModule_InfoAddFieldCString(ctx, "command", command_desc);
 			free(command_desc);
 		}
@@ -100,3 +101,6 @@ void setupCrashHandlers(RedisModuleCtx *ctx) {
 	}
 }
 
+#if (defined(DEBUG) || defined(_DEBUG)) && !defined(NDEBUG)
+#include "readies/cetara/diag/gdb.c"
+#endif

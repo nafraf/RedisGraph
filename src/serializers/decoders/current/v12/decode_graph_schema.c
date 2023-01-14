@@ -1,8 +1,8 @@
 /*
-* Copyright 2018-2022 Redis Labs Ltd. and Contributors
-*
-* This file is available under the Redis Labs Source Available License Agreement
-*/
+ * Copyright Redis Ltd. 2018 - present
+ * Licensed under your choice of the Redis Source Available License 2.0 (RSALv2) or
+ * the Server Side Public License v1 (SSPLv1).
+ */
 
 #include "decode_v12.h"
 
@@ -20,7 +20,7 @@ static void _RdbLoadFullTextIndex
 	 * #properties - M
 	 * M * property: {name, weight, nostem, phonetic} */
 
-	Index *idx       = NULL;
+	Index idx        = NULL;
 	char *language   = RedisModule_LoadStringBuffer(rdb, NULL);
 	char **stopwords = NULL;
 	
@@ -42,7 +42,7 @@ static void _RdbLoadFullTextIndex
 
 		if(!already_loaded) {
 			IndexField field;
-			Attribute_ID field_id = GraphContext_FindOrAddAttribute(gc, field_name);
+			Attribute_ID field_id = GraphContext_FindOrAddAttribute(gc, field_name, NULL);
 			IndexField_New(&field, field_id, field_name, weight, nostem, phonetic);
 			Schema_AddIndex(&idx, s, &field, IDX_FULLTEXT);
 		}
@@ -55,14 +55,11 @@ static void _RdbLoadFullTextIndex
 		ASSERT(idx != NULL);
 		Index_SetLanguage(idx, language);
 		Index_SetStopwords(idx, stopwords);
+		Index_ConstructStructure(idx);
 	}
 	
 	// free language
 	RedisModule_Free(language);
-
-	// free stopwords
-	for (uint i = 0; i < stopwords_count; i++) RedisModule_Free(stopwords[i]);
-	array_free(stopwords);
 }
 
 static void _RdbLoadExactMatchIndex
@@ -76,19 +73,24 @@ static void _RdbLoadExactMatchIndex
 	 * #properties - M
 	 * M * property */
 
-	Index *idx = NULL;
+	Index idx = NULL;
 	uint fields_count = RedisModule_LoadUnsigned(rdb);
 	for(uint i = 0; i < fields_count; i++) {
 		char *field_name = RedisModule_LoadStringBuffer(rdb, NULL);
 		if(!already_loaded) {
 			IndexField field;
-			Attribute_ID field_id = GraphContext_FindOrAddAttribute(gc, field_name);
+			Attribute_ID field_id = GraphContext_FindOrAddAttribute(gc, field_name, NULL);
 			IndexField_New(&field, field_id, field_name, INDEX_FIELD_DEFAULT_WEIGHT,
 				INDEX_FIELD_DEFAULT_NOSTEM, INDEX_FIELD_DEFAULT_PHONETIC);
 
 			Schema_AddIndex(&idx, s, &field, IDX_EXACT_MATCH);
 		}
 		RedisModule_Free(field_name);
+	}
+
+	// construct index structure
+	if(!already_loaded) {
+		Index_ConstructStructure(idx);
 	}
 }
 
@@ -128,12 +130,6 @@ static Schema *_RdbLoadSchema
 		}
 	}
 
-	if(s) {
-		// no entities are expected to be in the graph in this point in time
-		if(s->index) Index_Construct(s->index, gc->g);
-		if(s->fulltextIdx) Index_Construct(s->fulltextIdx, gc->g);
-	}
-
 	return s;
 }
 
@@ -146,7 +142,7 @@ static void _RdbLoadAttributeKeys(RedisModuleIO *rdb, GraphContext *gc) {
 	uint count = RedisModule_LoadUnsigned(rdb);
 	for(uint i = 0; i < count; i ++) {
 		char *attr = RedisModule_LoadStringBuffer(rdb, NULL);
-		GraphContext_FindOrAddAttribute(gc, attr);
+		GraphContext_FindOrAddAttribute(gc, attr, NULL);
 		RedisModule_Free(attr);
 	}
 }
@@ -186,3 +182,4 @@ void RdbLoadGraphSchema_v12(RedisModuleIO *rdb, GraphContext *gc) {
 		if(!already_loaded) array_append(gc->relation_schemas, s);
 	}
 }
+

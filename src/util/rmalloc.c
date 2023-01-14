@@ -1,8 +1,8 @@
 /*
-* Copyright 2018-2022 Redis Labs Ltd. and Contributors
-*
-* This file is available under the Redis Labs Source Available License Agreement
-*/
+ * Copyright Redis Ltd. 2018 - present
+ * Licensed under your choice of the Redis Source Available License 2.0 (RSALv2) or
+ * the Server Side Public License v1 (SSPLv1).
+ */
 
 #include "rmalloc.h"
 #include "../errors.h"
@@ -129,9 +129,9 @@ void rm_set_mem_capacity(int64_t cap) {
  * Only to be used when running module code from a non-Redis
  * context, such as unit tests. */
 void Alloc_Reset() {
-  RedisModule_Alloc = malloc;
-  RedisModule_Realloc = realloc;
-  RedisModule_Calloc = calloc;
-  RedisModule_Free = free;
-  RedisModule_Strdup = strdup;
+	RedisModule_Alloc   = malloc;
+	RedisModule_Realloc = realloc;
+	RedisModule_Calloc  = calloc;
+	RedisModule_Free    = free;
+	RedisModule_Strdup  = strdup;
 }

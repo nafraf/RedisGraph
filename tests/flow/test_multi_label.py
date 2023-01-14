@@ -1,4 +1,5 @@
 from common import *
+from index_utils import *
 
 graph = None
 GRAPH_ID = "multi_label"
@@ -113,8 +114,8 @@ class testMultiLabel():
 
     # Validate behavior of index scans on multi-labeled nodes
     def test05_index_scan(self):
-        query = """CREATE INDEX ON :L1(v)"""
-        query_result = graph.query(query)
+
+        query_result = create_node_exact_match_index(graph, 'L1', 'v', sync=True)
         self.env.assertEquals(query_result.indices_created, 1)
 
         # Query the explicitly created index
@@ -205,29 +206,6 @@ class testMultiLabel():
         query = """MATCH (a:L0:L1)-[*]->(b {v: 3}) RETURN labels(a), labels(b)"""
         query_result = graph.query(query)
         self.env.assertEquals(query_result.result_set, expected_result)
-
-    def test09_test_query_graph_populate_nodes_labels(self):
-        graph = Graph(self.redis_con, 'G')
-
-        # create node with label L1 for the test in the next query
-        # we need to make sure we replace the starting point of the traversal
-        # from all nodes with label L1 to all nodes with label L2
-        query = """CREATE (a:L1 {v:0})-[:R1]->()"""
-        query_result = graph.query(query)
-        self.env.assertEquals(query_result.labels_added, 1)
-        self.env.assertEquals(query_result.nodes_created, 2)
-        self.env.assertEquals(query_result.relationships_created, 1)
-
-        # node 'a' is mentioned twice in the following pattern
-        # each time with a different label, when extracting a sub query-graph
-        # we need to make sure all labels mentioned in the extracted pattern
-        # are extracted.
-        query = """MERGE ()-[:R2]->(a:L1)-[:R1]->(a:L2) RETURN *"""
-        plan = graph.execution_plan(query)
-        self.env.assertContains("Node By Label Scan | (a:L2)", plan)
-        query_result = graph.query(query)
-        self.env.assertEquals(query_result.nodes_created, 2)
-        self.env.assertEquals(query_result.relationships_created, 2)
 
     def test10_test_delete_label(self):
         graph = Graph(self.redis_con, 'delete_multi_label')

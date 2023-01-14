@@ -1,12 +1,12 @@
 /*
- * Copyright 2018-2022 Redis Labs Ltd. and Contributors
- *
- * This file is available under the Redis Labs Source Available License Agreement
+ * Copyright Redis Ltd. 2018 - present
+ * Licensed under your choice of the Redis Source Available License 2.0 (RSALv2) or
+ * the Server Side Public License v1 (SSPLv1).
  */
 
 #include <string.h>
 #include "RG.h"
-#include "../configuration/config.h"
+#include "configuration/config.h"
 
 void _Config_get_all(RedisModuleCtx *ctx) {
 	uint config_count = Config_END_MARKER;
@@ -100,7 +100,8 @@ void _Config_set(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 				RedisModule_ReplyWithError(ctx, error);
 			} else {
 				char *errmsg;
-				asprintf(&errmsg, "Failed to set config value %s to %s", config_name, val_str);
+				int rc __attribute__((unused));
+				rc = asprintf(&errmsg, "Failed to set config value %s to %s", config_name, val_str);
 				RedisModule_ReplyWithError(ctx, errmsg);
 				free(errmsg);
 			}

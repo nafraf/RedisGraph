@@ -1,8 +1,8 @@
 /*
-* Copyright 2018-2022 Redis Labs Ltd. and Contributors
-*
-* This file is available under the Redis Labs Source Available License Agreement
-*/
+ * Copyright Redis Ltd. 2018 - present
+ * Licensed under your choice of the Redis Source Available License 2.0 (RSALv2) or
+ * the Server Side Public License v1 (SSPLv1).
+ */
 
 #include "./arithmetic_expression.h"
 
@@ -174,7 +174,6 @@ static void _AR_EXP_ValidateArgsCount
 		// Set the query-level error.
 		ErrorCtx_SetError("Received %d arguments to function '%s', expected at most %d", argc,
 						  fdesc->name, fdesc->max_argc);
-		return;
 	}
 }
 
@@ -396,9 +395,6 @@ static bool _AR_EXP_ValidateInvocation
 			expected_type = fdesc->types[i];
 		}
 		if(!(actual_type & expected_type)) {
-			/* TODO extend string-building logic to better express multiple acceptable types, like:
-			 * RETURN 'a' * 2
-			 * "Type mismatch: expected Float, Integer or Duration but was String" */
 			Error_SITypeMismatch(argv[i], expected_type);
 			return false;
 		}
@@ -576,18 +572,38 @@ static AR_EXP_Result _AR_EXP_Evaluate(AR_ExpNode *root, const Record r,
 	return res;
 }
 
+SIValue AR_EXP_Evaluate_NoThrow(AR_ExpNode *root, const Record r) {
+	SIValue result;
+	AR_EXP_Result res = _AR_EXP_Evaluate(root, r, &result);
+
+	if(res == EVAL_ERR) {
+		return SI_NullVal(); // Otherwise return NULL; the query-level error will be emitted after cleanup.
+	}
+
+	// at least one param node was encountered during evaluation,
+	// tree should be parameters free, try reducing the tree
+	if(res == EVAL_FOUND_PARAM) {
+		AR_EXP_ReduceToScalar(root, true, NULL);
+	}
+
+	return result;
+}
+
 SIValue AR_EXP_Evaluate(AR_ExpNode *root, const Record r) {
 	SIValue result;
 	AR_EXP_Result res = _AR_EXP_Evaluate(root, r, &result);
 
 	if(res == EVAL_ERR) {
-		ErrorCtx_RaiseRuntimeException(NULL);  // Raise an exception if we're in a run-time context.
+		ErrorCtx_RaiseRuntimeException(NULL);
 		return SI_NullVal(); // Otherwise return NULL; the query-level error will be emitted after cleanup.
 	}
 
-	// At least one param node was encountered during evaluation,
-	// tree should be parameters free, try reducing the tree.
-	if(res == EVAL_FOUND_PARAM) AR_EXP_ReduceToScalar(root, true, NULL);
+	// at least one param node was encountered during evaluation,
+	// tree should be parameters free, try reducing the tree
+	if(res == EVAL_FOUND_PARAM) {
+		AR_EXP_ReduceToScalar(root, true, NULL);
+	}
+
 	return result;
 }
 

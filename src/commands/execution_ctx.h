@@ -1,8 +1,8 @@
 /*
-* Copyright 2018-2022 Redis Labs Ltd. and Contributors
-*
-* This file is available under the Redis Labs Source Available License Agreement
-*/
+ * Copyright Redis Ltd. 2018 - present
+ * Licensed under your choice of the Redis Source Available License 2.0 (RSALv2) or
+ * the Server Side Public License v1 (SSPLv1).
+ */
 
 #pragma once
 
@@ -13,9 +13,9 @@
  * @brief  Execution type derived from a query
  */
 typedef enum {
-	EXECUTION_TYPE_QUERY,           // Normal query execution.
-	EXECUTION_TYPE_INDEX_CREATE,    // Create index execution.
-	EXECUTION_TYPE_INDEX_DROP       // Drop index execution.
+	EXECUTION_TYPE_QUERY,           // normal query execution
+	EXECUTION_TYPE_INDEX_CREATE,    // create index execution
+	EXECUTION_TYPE_INDEX_DROP       // drop index execution
 } ExecutionType;
 
 /**

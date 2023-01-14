@@ -1,7 +1,7 @@
 /*
- * Copyright 2018-2022 Redis Labs Ltd. and Contributors
- *
- * This file is available under the Redis Labs Source Available License Agreement
+ * Copyright Redis Ltd. 2018 - present
+ * Licensed under your choice of the Redis Source Available License 2.0 (RSALv2) or
+ * the Server Side Public License v1 (SSPLv1).
  */
 
 #include "comprehension_funcs.h"
@@ -235,7 +235,7 @@ SIValue AR_LIST_COMPREHENSION(SIValue *argv, int argc, void *private_data) {
 
 		if(ctx->eval_exp) {
 			// compute the current element to append to the return list
-			SIValue newval = AR_EXP_Evaluate(ctx->eval_exp, r);
+			SIValue newval = AR_EXP_Evaluate_NoThrow(ctx->eval_exp, r);
 			SIArray_Append(&retval, newval);
 			SIValue_Free(newval);
 		} else {

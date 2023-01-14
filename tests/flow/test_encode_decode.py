@@ -1,4 +1,5 @@
 from common import *
+from index_utils import *
 from random_graph import create_random_schema, create_random_graph, run_random_graph_ops, ALL_OPS
 import re
 
@@ -18,7 +19,8 @@ def compare_nodes_result_set(env, result_set_a, result_set_b):
 class test_encode_decode(FlowTestsBase):
     def __init__(self):
         self.env = Env(decodeResponses=True,
-                       moduleArgs='VKEY_MAX_ENTITY_COUNT 10 NODE_CREATION_BUFFER 100')
+                       moduleArgs='VKEY_MAX_ENTITY_COUNT 10 NODE_CREATION_BUFFER 100',
+                       enableDebugCommand=True)
         global redis_con
         redis_con = self.env.getConnection()
 
@@ -145,7 +147,7 @@ class test_encode_decode(FlowTestsBase):
     def test07_index_after_encode_decode_in_v7(self):
         graph_name = "index_after_encode_decode_in_v7"
         redis_graph = Graph(redis_con, graph_name)
-        redis_graph.query("CREATE INDEX ON :N(val)")
+        create_node_exact_match_index(redis_graph, 'N', 'val', sync=True)
         # Verify indices exists.
         plan = redis_graph.execution_plan(
             "MATCH (n:N {val:1}) RETURN n")
@@ -170,7 +172,7 @@ class test_encode_decode(FlowTestsBase):
         graph2.query("CREATE (a:L {v: 1})-[:E]->(b:L2 {v: 2})")
 
         # Add an index to the multi-key graph.
-        graph1.query("CREATE INDEX ON :L(v)")
+        create_node_exact_match_index(graph1, 'L', 'v', sync=True)
 
         # Save RDB and reload from RDB
         redis_con.execute_command("DEBUG", "RELOAD")

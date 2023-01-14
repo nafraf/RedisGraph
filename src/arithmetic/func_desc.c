@@ -1,8 +1,8 @@
 /*
-* Copyright 2018-2022 Redis Labs Ltd. and Contributors
-*
-* This file is available under the Redis Labs Source Available License Agreement
-*/
+ * Copyright Redis Ltd. 2018 - present
+ * Licensed under your choice of the Redis Source Available License 2.0 (RSALv2) or
+ * the Server Side Public License v1 (SSPLv1).
+ */
 
 #include "func_desc.h"
 #include "../RG.h"
@@ -71,7 +71,7 @@ AR_FuncDesc *AR_GetFunc
 	bool include_internal
 ) {
 	size_t len = strlen(func_name);
-	char lower_func_name[len];
+	char lower_func_name[len + 1];
 	str_tolower(func_name, lower_func_name, &len);
 	void *f = raxFind(__aeRegisteredFuncs, (unsigned char *)lower_func_name, len);
 
@@ -98,7 +98,7 @@ bool AR_FuncExists
 	const char *func_name
 ) {
 	size_t len = strlen(func_name);
-	char lower_func_name[len];
+	char lower_func_name[len + 1];
 	str_tolower(func_name, lower_func_name, &len);
 	void *f = raxFind(__aeRegisteredFuncs, (unsigned char *)lower_func_name, len);
 
@@ -114,7 +114,7 @@ bool AR_FuncIsAggregate
 	const char *func_name
 ) {
 	size_t len = strlen(func_name);
-	char lower_func_name[len];
+	char lower_func_name[len + 1];
 	str_tolower(func_name, lower_func_name, &len);
 	AR_FuncDesc *f = raxFind(__aeRegisteredFuncs,
 			(unsigned char *)lower_func_name, len);

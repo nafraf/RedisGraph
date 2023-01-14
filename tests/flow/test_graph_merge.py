@@ -1,5 +1,6 @@
-from common import *
 import re
+from common import *
+from index_utils import *
 
 redis_graph = None
 graph_2 = None
@@ -191,10 +192,8 @@ class testGraphMergeFlow(FlowTestsBase):
 
     # Add node that matches pre-existing index
     def test15_merge_indexed_entity(self):
-        global redis_graph
         # Create index
-        query = """CREATE INDEX ON :person(age)"""
-        redis_graph.query(query)
+        create_node_exact_match_index(redis_graph, 'person', 'age', sync=True)
 
         count_query = """MATCH (p:person) WHERE p.age > 0 RETURN COUNT(p)"""
         result = redis_graph.query(count_query)
@@ -509,8 +508,7 @@ class testGraphMergeFlow(FlowTestsBase):
         graph = Graph(redis_con, "M")
 
         # Index the "L:prop) combination so that the MERGE tree will not have a filter op.
-        query = """CREATE INDEX ON :L(prop)"""
-        graph.query(query)
+        create_node_exact_match_index(graph, 'L', 'prop', sync=True)
 
         query = """MERGE (n:L {prop:1}) WITH n WHERE n.prop < 1 RETURN n.prop"""
         result = graph.query(query)
@@ -542,10 +540,6 @@ class testGraphMergeFlow(FlowTestsBase):
         self.env.assertEquals(result.properties_set, 0)
 
     def test27_merge_create_invalid_entity(self):
-        # Skip this test if running under Valgrind, as it causes a memory leak.
-        if self.env.envRunner.debugger is not None:
-            self.env.skip()
-
         redis_con = self.env.getConnection()
         graph = Graph(redis_con, "N") # Instantiate a new graph.
 
@@ -619,3 +613,65 @@ class testGraphMergeFlow(FlowTestsBase):
         self.env.assertEquals(res.nodes_created, 0)
         self.env.assertEquals(res.relationships_created, 0)
         self.env.assertEquals(res.result_set, [['abcd', 'x', 'y']])
+
+    def test30_record_clone_under_merge(self):
+        # the following operations
+        # 1. node label scan
+        # 2. all node scan
+        # 3. node by id seek
+        # hold the child record clone and enrich it before returning to parent
+        # if the parent is eager then these operation delete the child record
+        # this can lead to free values that is used in other operation
+        # this tests check that this operations using deep clone
+
+        redis_con = self.env.getConnection()
+        graph = Graph(redis_con, "node_label_scan_under_merge")
+
+        # Create data
+        graph.query("""CREATE (:A {name:"A"}), (:B {id:"B"}), (:B {id:"B"})""")
+
+        expected = {"name": "A", "id": "C"}
+        
+        # node label scan under merge
+        query = """UNWIND [{name: "A", id: "C"}] AS x
+                   MATCH (i:A {name:x.name})
+                   WITH *
+                   MATCH (m:B {id:"B"})
+                   MERGE (m)-[:R]->(i)
+                   RETURN x"""
+        res = graph.query(query)
+        self.env.assertEquals(res.result_set[0][0], expected)
+
+        # all node scan under merge
+        query = """UNWIND [{name: "A", id: "C"}] AS x
+                   MATCH (i:A {name:x.name})
+                   WITH *
+                   MATCH (m)
+                   MERGE (m)-[:R]->(i)
+                   RETURN x"""
+        res = graph.query(query)
+        self.env.assertEquals(res.result_set[0][0], expected)
+
+        # node by id seek under merge
+        query = """UNWIND [{name: "A", id: "C"}] AS x
+                   MATCH (i:A {name:x.name})
+                   WITH *
+                   MATCH (m)
+                   WHERE id(m) > 0
+                   MERGE (m)-[:R]->(i)
+                   RETURN x"""
+        res = graph.query(query)
+        self.env.assertEquals(res.result_set[0][0], expected)
+
+    def test31_alias_multiple_definition(self):
+        redis_con = self.env.getConnection()
+        graph = Graph(redis_con, "M")
+
+        # Redefinition of an alias by depicting L2 as a label of a
+        # should raise an exception
+        query = """MERGE ()-[:R2]->(a:L1)-[:R1]->(a:L2) RETURN *"""
+        try:
+            graph.execution_plan(query)
+        except redis.exceptions.ResponseError as e:
+            # Expecting an error.
+            assert("can't be redeclared in a MERGE clause" in str(e))

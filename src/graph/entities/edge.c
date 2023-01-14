@@ -1,8 +1,8 @@
 /*
-* Copyright 2018-2022 Redis Labs Ltd. and Contributors
-*
-* This file is available under the Redis Labs Source Available License Agreement
-*/
+ * Copyright Redis Ltd. 2018 - present
+ * Licensed under your choice of the Redis Source Available License 2.0 (RSALv2) or
+ * the Server Side Public License v1 (SSPLv1).
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,27 +50,6 @@ Node *Edge_GetDestNode
 ) {
 	ASSERT(e);
 	return e->dest;
-}
-
-RG_Matrix Edge_GetMatrix
-(
-	Edge *e
-) {
-	ASSERT(e);
-
-	// retrieve matrix from graph if edge matrix isn't set
-	if(!e->mat) {
-		Graph *g = QueryCtx_GetGraph();
-
-		// get relation matrix
-		if(e->relationID == GRAPH_UNKNOWN_RELATION) {
-			e->mat = Graph_GetZeroMatrix(g);
-		} else {
-			e->mat = Graph_GetRelationMatrix(g, e->relationID, false);
-		}
-	}
-
-	return e->mat;
 }
 
 void Edge_SetSrcNode
