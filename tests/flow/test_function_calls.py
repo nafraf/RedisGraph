@@ -2407,8 +2407,14 @@ class testFunctionCallsFlow(FlowTestsBase):
             "RETURN +-3" : [[-3]],
             "RETURN --7.5" : [[7.5]],
             "RETURN +-7.5" : [[-7.5]],
+            "RETURN 3--3" : [[6]],
+            "RETURN 3-+3" : [[0]],
+            "RETURN 3+-3" : [[0]],
+            "RETURN 3++3" : [[6]],
             "RETURN NOT NOT TRUE" : [[True]],
             "RETURN NOT NOT NOT TRUE" : [[False]],
+            "CREATE (n:N {v:2}) RETURN -n.v" : [[-2]],
+            "CREATE (n:N {v:2.4}) RETURN -n.v" : [[-2.4]]
         }
         for query, expected_result in query_to_expected_result.items():
             self.get_res_and_assertEquals(query, expected_result)
