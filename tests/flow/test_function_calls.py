@@ -2407,6 +2407,8 @@ class testFunctionCallsFlow(FlowTestsBase):
             "RETURN +-3" : [[-3]],
             "RETURN --7.5" : [[7.5]],
             "RETURN +-7.5" : [[-7.5]],
+            "RETURN NOT NOT TRUE" : [[True]],
+            "RETURN NOT NOT NOT TRUE" : [[False]],
         }
         for query, expected_result in query_to_expected_result.items():
             self.get_res_and_assertEquals(query, expected_result)
