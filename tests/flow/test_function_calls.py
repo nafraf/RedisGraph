@@ -2385,6 +2385,16 @@ class testFunctionCallsFlow(FlowTestsBase):
             "RETURN +-+3",
             "RETURN ++-3",
             "RETURN +++3",
+            "RETURN -+3.3",
+            "RETURN ++3.3",
+            "RETURN ---3.3",
+            "RETURN --+3.3",
+            "RETURN -+-3.3",
+            "RETURN -++3.3",
+            "RETURN +--3.3",
+            "RETURN +-+3.3",
+            "RETURN ++-3.3",
+            "RETURN +++3.3",
             "RETURN + NOT 3",
             "RETURN + IS NOT NULL 3"
         ]
@@ -2392,13 +2402,11 @@ class testFunctionCallsFlow(FlowTestsBase):
             self.expect_error(query, "Invalid input")
 
         # Test valid inputs
-        query = "RETURN --3"
-        expected_result = [[3]]
-        actual_result = graph.query(query)
-        self.env.assertEquals(actual_result.result_set, expected_result)
-
-        query = "RETURN +-3"
-        expected_result = [[-3]]
-        actual_result = graph.query(query)
-        self.env.assertEquals(actual_result.result_set, expected_result)     
-        
+        query_to_expected_result = {
+            "RETURN --3" : [[3]],
+            "RETURN +-3" : [[-3]],
+            "RETURN --7.5" : [[7.5]],
+            "RETURN +-7.5" : [[-7.5]],
+        }
+        for query, expected_result in query_to_expected_result.items():
+            self.get_res_and_assertEquals(query, expected_result)
