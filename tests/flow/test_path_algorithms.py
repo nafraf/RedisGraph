@@ -444,3 +444,8 @@ class testAllShortestPaths():
             self.env.assertEquals(len(result.result_set), 5)
             for i in range(0, 5):
                 self.env.assertContains(result.result_set[i], self.ss_paths)
+
+    #def test08_ss_default_weight(self):
+        # GRAPH.QUERY g "CREATE (a)-[:E {weight: ToInteger((rand()*10)-10), cost: ToInteger((rand() * 10) - 10)}]->(b)"
+        # MATCH (n) CALL algo.SSpaths({sourceNode: n, weightProp: weight, costProp: cost}) YIELD pathCost
+
