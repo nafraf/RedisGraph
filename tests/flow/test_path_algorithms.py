@@ -20,7 +20,9 @@ class testAllShortestPaths():
         self.graph.query(f"""UNWIND range(1, {EDGES}) AS i
                              WITH ToInteger(rand() * {NODES}) AS x, ToInteger(rand() * {NODES}) AS y
                              MATCH (a:L{{v: x}}), (b:L{{v: y}})
-                             CREATE (a)-[:E {{weight: ToInteger(rand()*5) + 1, cost: ToInteger(rand()*10) + 3}}]->(b)""")
+                             CREATE (a)-[:E {{weight: ToInteger(rand()*5) + 1, cost: ToInteger(rand()*10) + 3,
+                                             negativeWeight: ToInteger(rand()*5) - 5, negativeCost: ToInteger(rand()*10) - 10}}]->(b)
+                             """)
 
     def init(self):
         self.n = 0                   # start node ID
@@ -447,5 +449,5 @@ class testAllShortestPaths():
 
     #def test08_ss_default_weight(self):
         # GRAPH.QUERY g "CREATE (a)-[:E {weight: ToInteger((rand()*10)-10), cost: ToInteger((rand() * 10) - 10)}]->(b)"
-        # MATCH (n) CALL algo.SSpaths({sourceNode: n, weightProp: weight, costProp: cost}) YIELD pathCost
+        # MATCH (n) CALL algo.SSpaths({sourceNode: n, weightProp: 'weight', costProp: 'cost'}) YIELD pathWeight, pathCost
 

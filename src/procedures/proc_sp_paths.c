@@ -411,19 +411,20 @@ static void addNeighbors
 	}
 }
 
-// get numeric attribute value of an entity otherwise return default value
-static inline SIValue _get_value_or_default
+// get numeric attribute value of an entity otherwise return min value
+static inline SIValue _get_value_or_min
 (
 	GraphEntity *ge,
 	Attribute_ID id,
-	SIValue default_value
+	SIValue min_value
 ) {
 	SIValue *v = GraphEntity_GetProperty(ge, id);
-	if(v == ATTRIBUTE_NOTFOUND) return default_value;
+	if(v == ATTRIBUTE_NOTFOUND) return min_value;
 
-	if(SI_TYPE(*v) & SI_NUMERIC) return *v;
-
-	return default_value;
+	if((SI_TYPE(*v) & SI_NUMERIC) && (SIValue_Compare(*v, min_value, NULL) > 0)) {
+		return *v;
+	}
+	return min_value;
 }
 
 // use DFS to find all paths from src to dst tracking cost and weight
@@ -454,8 +455,8 @@ static void SPpaths_next
 			// if depth is 0 this is the source node, there is no leading edge to it.
 			// For depth > 0 for each frontier node, there is a leading edge.
 			if(depth > 0) {
-				SIValue c = _get_value_or_default((GraphEntity *)&frontierConnection.edge, ctx->cost_prop, SI_LongVal(1));
-				SIValue w = _get_value_or_default((GraphEntity *)&frontierConnection.edge, ctx->weight_prop, SI_LongVal(1));
+				SIValue c = _get_value_or_min((GraphEntity *)&frontierConnection.edge, ctx->cost_prop, SI_LongVal(1));
+				SIValue w = _get_value_or_min((GraphEntity *)&frontierConnection.edge, ctx->weight_prop, SI_LongVal(1));
 				if(p->cost + SI_GET_NUMERIC(c) <= ctx->max_cost && p->weight + SI_GET_NUMERIC(w) <= max_weight) {
 					p->cost += SI_GET_NUMERIC(c);
 					p->weight += SI_GET_NUMERIC(w);
@@ -489,8 +490,8 @@ static void SPpaths_next
 			Path_PopNode(ctx->path);
 			if(Path_EdgeCount(ctx->path)) {
 				Edge e = Path_PopEdge(ctx->path);
-				SIValue c = _get_value_or_default((GraphEntity *)&e, ctx->cost_prop, SI_LongVal(1));
-				SIValue w = _get_value_or_default((GraphEntity *)&e, ctx->weight_prop, SI_LongVal(1));
+				SIValue c = _get_value_or_min((GraphEntity *)&e, ctx->cost_prop, SI_LongVal(1));
+				SIValue w = _get_value_or_min((GraphEntity *)&e, ctx->weight_prop, SI_LongVal(1));
 				p->cost -= SI_GET_NUMERIC(c);
 				p->weight -= SI_GET_NUMERIC(w);
 			}
