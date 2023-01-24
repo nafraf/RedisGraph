@@ -301,11 +301,13 @@ class testAllShortestPaths():
         except redis.exceptions.ResponseError as e:
             self.env.assertContains("pathCount must be greater than or equal to 0", str(e))
 
-    def sp_query(self, source, target, relTypes, maxLen, maxCost, pathCount, relDirection):
+    def sp_query(self, source, target, relTypes, maxLen, maxCost, pathCount, relDirection, weightProp, costProp):
         args = ["sourceNode: n",
-                "targetNode: m",
-                "weightProp: 'weight'",
-                "costProp: 'cost'"]
+                "targetNode: m"]
+        if weightProp is not None:
+            args.append(f"weightProp: '{weightProp}'")
+        if costProp is not None:
+            args.append(f"costProp: '{costProp}'")
         if relTypes is not None:
             args.append(f"relTypes: {relTypes}")
         if maxLen is not None:
@@ -325,8 +327,8 @@ class testAllShortestPaths():
 
     def test02_sp_single_path(self):
         results = [
-            self.sp_query(self.n, self.m, ["E"], 3, self.max_cost, 1, None),
-            self.sp_query(self.n, self.m, None, 3, self.max_cost, 1, None)
+            self.sp_query(self.n, self.m, ["E"], 3, self.max_cost, 1, None, "weight", "cost"),
+            self.sp_query(self.n, self.m, None, 3, self.max_cost, 1, None, "weight", "cost")
         ]
 
         for result in results:
@@ -337,8 +339,8 @@ class testAllShortestPaths():
             self.env.assertContains(result.result_set[0], all_minimal)
 
         results = [
-            self.sp_query(self.m, self.n, ["E"], 3, self.max_cost, 1, "incoming"),
-            self.sp_query(self.m, self.n, None, 3, self.max_cost, 1, "incoming")
+            self.sp_query(self.m, self.n, ["E"], 3, self.max_cost, 1, "incoming", "weight", "cost"),
+            self.sp_query(self.m, self.n, None, 3, self.max_cost, 1, "incoming", "weight", "cost")
         ]
 
         for result in results:
@@ -350,8 +352,8 @@ class testAllShortestPaths():
 
     def test03_sp_all_minimal_paths(self):
         results = [
-            self.sp_query(self.n, self.m, ["E"], 3, self.max_cost, 0, None),
-            self.sp_query(self.n, self.m, None, 3, self.max_cost, 0, None)
+            self.sp_query(self.n, self.m, ["E"], 3, self.max_cost, 0, None, "weight", "cost"),
+            self.sp_query(self.n, self.m, None, 3, self.max_cost, 0, None, "weight", "cost")
         ]
 
         for result in results:
@@ -361,8 +363,8 @@ class testAllShortestPaths():
                 self.env.assertContains(result.result_set[i], all_minimal)
 
         results = [
-            self.sp_query(self.m, self.n, ["E"], 3, self.max_cost, 0, "incoming"),
-            self.sp_query(self.m, self.n, None, 3, self.max_cost, 0, "incoming")
+            self.sp_query(self.m, self.n, ["E"], 3, self.max_cost, 0, "incoming", "weight", "cost"),
+            self.sp_query(self.m, self.n, None, 3, self.max_cost, 0, "incoming", "weight", "cost")
         ]
 
         for result in results:
@@ -373,8 +375,8 @@ class testAllShortestPaths():
 
     def test04_sp_k_minimal_paths(self):
         results = [
-            self.sp_query(self.n, self.m, ["E"], 3, self.max_cost, 5, None),
-            self.sp_query(self.n, self.m, None, 3, self.max_cost, 5, None)
+            self.sp_query(self.n, self.m, ["E"], 3, self.max_cost, 5, None, "weight", "cost"),
+            self.sp_query(self.n, self.m, None, 3, self.max_cost, 5, None, "weight", "cost")
         ]
 
         for result in results:
@@ -384,8 +386,8 @@ class testAllShortestPaths():
                 self.env.assertContains(result.result_set[i], self.sp_paths)
 
         results = [
-            self.sp_query(self.m, self.n, ["E"], 3, self.max_cost, 5, "incoming"),
-            self.sp_query(self.m, self.n, None, 3, self.max_cost, 5, "incoming")
+            self.sp_query(self.m, self.n, ["E"], 3, self.max_cost, 5, "incoming", "weight", "cost"),
+            self.sp_query(self.m, self.n, None, 3, self.max_cost, 5, "incoming", "weight", "cost")
         ]
 
         for result in results:
@@ -393,10 +395,13 @@ class testAllShortestPaths():
             for i in range(0, expected_len):
                 self.env.assertContains(result.result_set[i], self.incoming_sp_paths)
 
-    def ss_query(self, source, relTypes, maxLen, maxCost, pathCount, relDirection):
-        args = ["sourceNode: n",
-                "weightProp: 'weight'",
-                "costProp: 'cost'"]
+    def ss_query(self, source, relTypes, maxLen, maxCost, pathCount, relDirection, weightProp, costProp):
+        args = ["sourceNode: n"]
+        if weightProp is not None:
+            args.append(f"weightProp: '{weightProp}'")
+        if costProp is not None:
+            args.append(f"costProp: '{costProp}'")
+        if relTypes is not None:
         if relTypes is not None:
             args.append(f"relTypes: {relTypes}")
         if maxLen is not None:
@@ -416,8 +421,8 @@ class testAllShortestPaths():
 
     def test05_ss_single_path(self):
         results = [
-            self.ss_query(self.n, ["E"], 3, self.max_cost, 1, None),
-            self.ss_query(self.n, None, 3, self.max_cost, 1, None)
+            self.ss_query(self.n, ["E"], 3, self.max_cost, 1, None, "weight", "cost"),
+            self.ss_query(self.n, None, 3, self.max_cost, 1, None, "weight", "cost")
         ]
 
         for result in results:
@@ -426,8 +431,8 @@ class testAllShortestPaths():
 
     def test06_ss_all_minimal_paths(self):
         results = [
-            self.ss_query(self.n, ["E"], 3, self.max_cost, 0, None),
-            self.ss_query(self.n, None, 3, self.max_cost, 0, None)
+            self.ss_query(self.n, ["E"], 3, self.max_cost, 0, None, "weight", "cost"),
+            self.ss_query(self.n, None, 3, self.max_cost, 0, None, "weight", "cost")
         ]
 
         for result in results:
@@ -438,8 +443,8 @@ class testAllShortestPaths():
 
     def test07_ss_k_minimal_paths(self):
         results = [
-            self.ss_query(self.n, ["E"], 3, self.max_cost, 5, None),
-            self.ss_query(self.n, None, 3, self.max_cost, 5, None)
+            self.ss_query(self.n, ["E"], 3, self.max_cost, 5, None, "weight", "cost"),
+            self.ss_query(self.n, None, 3, self.max_cost, 5, None, "weight", "cost")
         ]
 
         for result in results:
