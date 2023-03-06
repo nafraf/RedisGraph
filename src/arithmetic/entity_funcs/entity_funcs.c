@@ -11,6 +11,7 @@
 #include "../../query_ctx.h"
 #include "../../datatypes/map.h"
 #include "../../datatypes/array.h"
+#include "../list_funcs/list_funcs.h"
 #include "../../graph/graphcontext.h"
 #include "../../datatypes/datatypes.h"
 #include "../../graph/entities/node.h"
@@ -174,17 +175,16 @@ static SIValue _AR_NodeDegree
 				ErrorCtx_SetError("Received %d arguments, expected at most 2 because second argument is List", argc);
 			}
 			// validate signature function(NODE, ARRAY_OF_STRINGS)
-			uint len = SIArray_Length(argv[1]);
+			labels = AR_DEDUP(&argv[1], 1, NULL);
+			uint len = SIArray_Length(labels);
 			for(int j = 0; j < len; j++) {
-				SIValue elem = SIArray_Get(argv[1], j);
+				SIValue elem = SIArray_Get(labels, j);
 				if(SI_TYPE(elem) != T_STRING) {
 					SIArray_Free(labels);
 					Error_SITypeMismatch(elem, T_STRING);
 					return SI_NullVal();
 				}
-				if(SIArray_ContainsValue(labels, elem, NULL) == false) {
-					SIArray_Append(&labels, elem);
-				}
+				
 			}
 		}
 		uint len = SIArray_Length(labels);

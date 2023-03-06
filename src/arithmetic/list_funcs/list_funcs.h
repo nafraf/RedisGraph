@@ -21,3 +21,9 @@ typedef struct {
 
 void Register_ListFuncs();
 
+// given a list, return a similar list after removing duplicate elements
+SIValue AR_DEDUP(
+	SIValue *argv,      // arguments
+    int argc,           // number of arguments
+    void *private_data  // private context
+);
