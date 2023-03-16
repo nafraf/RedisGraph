@@ -243,7 +243,6 @@ Feature: Match5 - Match variable length patterns over given graphs scenarios
       | c.name |
     And no side effects
 
-  @skip
   Scenario: [12] Handling upper and lower bounded variable length match, empty interval 2
     When executing query:
       """
@@ -255,7 +254,6 @@ Feature: Match5 - Match variable length patterns over given graphs scenarios
       | c.name |
     And no side effects
 
-  @skip
   Scenario: [13] Handling upper bounded variable length match, empty interval
     When executing query:
       """

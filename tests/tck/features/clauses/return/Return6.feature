@@ -79,7 +79,6 @@ Feature: Return6 - Implicit grouping with aggregates
       | 2     |
     And no side effects
 
-  @skip
   Scenario: [4] Support multiple divisions in aggregate function
     Given an empty graph
     And having executed:
