@@ -325,6 +325,22 @@ static AST_Validation _Validate_CREATE_Entities
 				return AST_INVALID;
 			}
 		}
+	// } else {
+	// 	// If the node is already bound, the CREATE pattern should not introduce labels or properties
+	// 	// This is invalid: CREATE (a:X)-[:R]->(b), (a:Y)-[:R]->(c)
+	// 	for(uint i = 0; i < nelems; i+=2) {
+	// 		const cypher_astnode_t *node = cypher_ast_pattern_path_get_element(path, i);
+	// 		const cypher_astnode_t *identifier = cypher_ast_node_pattern_get_identifier(node);
+	// 		if(identifier) {
+	// 			const char *alias = cypher_ast_identifier_get_name(identifier);
+	// 			if(raxFind(defined_aliases, (unsigned char *)alias, strlen(alias)) != raxNotFound) {
+	// 				continue;
+	// 			} else if( cypher_ast_node_pattern_nlabels(node) || cypher_ast_node_pattern_get_properties(node)) {
+	// 				ErrorCtx_SetError("The bound variable '%s' can't be redeclared with new labels or properties", alias);
+	// 				return AST_INVALID;
+	// 			}
+	// 		}
+	// 	}
 	}
 
 	return AST_VALID;

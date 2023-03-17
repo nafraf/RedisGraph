@@ -151,7 +151,7 @@ class testGraphCreationFlow(FlowTestsBase):
     # test creating queries with matching relationship type :R|R
     # the results can't report duplicates
     def test10_match_duplicated_reltype(self):
-        query = """CREATE (a:A)-[r1:R1]->(b:B), (a:A)-[r2:R2]->(b:B)"""
+        query = """CREATE (a:A)-[r1:R1]->(b:B), (a)-[r2:R2]->(b)"""
         result = redis_graph.query(query)
         self.env.assertEquals(result.nodes_created, 2)
         self.env.assertEquals(result.relationships_created, 2)
@@ -194,3 +194,27 @@ class testGraphCreationFlow(FlowTestsBase):
             result = redis_graph.query(query)
             expected_result = [[0]]
             self.env.assertEquals(result.result_set, expected_result)
+
+    def test11_create_reusing_node_variable(self):
+        # These queries are valid because neither labels or properties are added to node that is already bound
+        query = """CREATE (x:X)-[r1:R1]->(y:Y), (x)-[r2:R2]->(y), (x)-[r3:R3]->(x)"""
+        result = redis_graph.query(query)
+        self.env.assertEquals(result.nodes_created, 2)
+        self.env.assertEquals(result.relationships_created, 3)
+        self.env.assertEquals(result.labels_added, 2)
+
+        # These queries should fail, because are adding a new label or properties on a node that is already bound
+        queries = ["CREATE (n:X)-[:R1]->(), (n:Y)-[:R2]->()",
+                   "CREATE ()-[:R1]->(n:X), (n:Y)-[:R2]->()",
+                   "CREATE ()-[:R1]->(n:X), ()-[:R2]->()-[:R3]->(n:Y)",
+                #    "CREATE ()-[:R1]->(n:X), (n:Y)", # TO DO
+                #    "CREATE ()-[:R1]->(n), (n {v:1})", # TO DO
+                   "CREATE (n:X)-[:R1]->(), (n:Y)-[:R2]->()",
+                #    "CREATE (n:X)-[:R]->(n:Y)" # TO DO
+                   ]
+        for query in queries:
+            try:
+                redis_graph.query(query)
+                self.env.assertTrue(False)
+            except redis.exceptions.ResponseError as e:
+                self.env.assertContains("The bound variable 'n' can't be redeclared with new labels or properties", str(e))
