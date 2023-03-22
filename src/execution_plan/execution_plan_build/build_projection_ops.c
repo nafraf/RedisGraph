@@ -142,7 +142,11 @@ AR_ExpNode **_BuildWithLHSProjectionExpressions(const cypher_astnode_t *clause) 
 }
 
 // Validate if order expression is part of projection expressions or with lhs projected expressions
-bool _validateOrderExpression(AR_ExpNode *order_exp, AR_ExpNode **project_exps, AR_ExpNode **with_lhs_proj) {
+bool _validateOrderExpression(
+	AR_ExpNode *order_exp,      // expression to validate
+	AR_ExpNode **project_exps,  // expressions in ORDER BY clause 
+	AR_ExpNode **with_lhs_proj  // LHS of expressions in WITH clause
+) {
 	bool found = false;
 	uint project_count = array_len(project_exps);
 	uint with_lhs_proj_count = array_len(with_lhs_proj);
@@ -174,7 +178,6 @@ bool _validateOrderExpression(AR_ExpNode *order_exp, AR_ExpNode **project_exps, 
 				ASSERT(false);
 		}
 	} else if(order_exp->type == AR_EXP_OP) {
-
 		for(uint j = 0; j < project_count && !found; j++) {
 			found = AR_EXP_Equal(order_exp, project_exps[j]);
 		}
@@ -182,14 +185,26 @@ bool _validateOrderExpression(AR_ExpNode *order_exp, AR_ExpNode **project_exps, 
 			found = AR_EXP_Equal(order_exp, with_lhs_proj[k]);
 		}
 		if(!found) {
-			for(uint i = 0; i < order_exp->op.child_count; i++){
-				AR_ExpNode *child = order_exp->op.children[i];
-				if (_validateOrderExpression(child, project_exps, with_lhs_proj) == false) {
-					return false;
-				}
+			if(order_exp->op.f->aggregate == true) {
+				// To detect invalid cases like this:
+				// MATCH (n:Person) WITH count(n.age) AS cnt ORDER BY max(n.id) RETURN 1
+				ErrorCtx_SetError("Ambiguous Aggregation Expression: in a WITH/RETURN with an aggregation, \
+it is not possible to use aggregation functions different to the projected by the WITH.");
+				return false;
 			}
-			return true;
+
+			bool valid_child = true;
+			for(uint i = 0; i < order_exp->op.child_count && valid_child; i++){
+				AR_ExpNode *child = order_exp->op.children[i];
+				valid_child = _validateOrderExpression(child, project_exps, with_lhs_proj);
+			}
+			found = valid_child;
 		}
+	}
+
+	if(!found) {
+		ErrorCtx_SetError("Ambiguous Aggregation Expression: in a WITH/RETURN with an aggregation, \
+it is not possible to access variables not projected by the WITH/RETURN.");
 	}
 	return found;
 }
@@ -200,7 +215,7 @@ static void _combine_projection_arrays
 	AR_ExpNode ***exps_ptr,     // projection expressions
 	AR_ExpNode **order_exps,    // expressions in ORDER BY clause
 	bool aggregate,             // is an agg-func used in one of the projections
-	AR_ExpNode **with_lhs_proj  // LHS expressions of WITH clause
+	AR_ExpNode **with_lhs_proj  // LHS of expressions in WITH clause
 ) {
 	
 	rax *projection_names = raxNew();
@@ -208,43 +223,31 @@ static void _combine_projection_arrays
 	uint order_count = array_len(order_exps);
 	uint project_count = array_len(project_exps);
 	uint with_lhs_proj_count = array_len(with_lhs_proj);
-
-	// Add all WITH/RETURN projection names to rax
-	for(uint i = 0; i < project_count; i ++) {
-		const char *name = project_exps[i]->resolved_name;
-		raxTryInsert(projection_names, (unsigned char *)name, strlen(name), NULL, NULL);
-	}
+	bool valid_projections = true;
 
 	// if an aggregation is performed in one of the projections, only projected
 	// variables are valid in the ORDER BY clause
 	if(aggregate) {
-		for(uint i = 0; i < order_count; i++) {
-			bool found = false;
-			for(uint j = 0; j < project_count && !found; j++) {
-				found = strcmp(order_exps[i]->resolved_name,
-							   project_exps[j]->resolved_name) == 0 ||
-						AR_EXP_Equal(order_exps[i], project_exps[j]);
-			}
-			for(uint k = 0; k < with_lhs_proj_count && !found; k++) {
-				found = AR_EXP_Equal(order_exps[i], with_lhs_proj[k]);
-			}
-			if(!found) {
-				if(_validateOrderExpression(order_exps[i], project_exps, with_lhs_proj)) {
-					continue;
-				}
-				ErrorCtx_SetError("In a WITH/RETURN with an aggregation, \
-it is not possible to access variables not projected by the WITH/RETURN.");
-			}
+		for(uint i = 0; i < order_count && valid_projections; i++) {
+			valid_projections = _validateOrderExpression(order_exps[i], project_exps, with_lhs_proj);
 		}
 	}
 
-	// Merge non-duplicate order expressions into projection array.
-	for(uint i = 0; i < order_count; i ++) {
-		const char *name = order_exps[i]->resolved_name;
-		int new_name = raxTryInsert(projection_names, (unsigned char *)name, strlen(name), NULL, NULL);
-		// If it is a new projection, add a clone to the array.
-		if(new_name) {
-			array_append(project_exps, AR_EXP_Clone(order_exps[i]));
+	if(valid_projections) {
+		// Add all WITH/RETURN projection names to rax
+		for(uint i = 0; i < project_count; i ++) {
+			const char *name = project_exps[i]->resolved_name;
+			raxTryInsert(projection_names, (unsigned char *)name, strlen(name), NULL, NULL);
+		}
+
+		// Merge non-duplicate order expressions into projection array.
+		for(uint i = 0; i < order_count; i ++) {
+			const char *name = order_exps[i]->resolved_name;
+			int new_name = raxTryInsert(projection_names, (unsigned char *)name, strlen(name), NULL, NULL);
+			// If it is a new projection, add a clone to the array.
+			if(new_name) {
+				array_append(project_exps, AR_EXP_Clone(order_exps[i]));
+			}
 		}
 	}
 

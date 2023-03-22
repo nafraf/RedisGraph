@@ -50,21 +50,25 @@ class testOrderBy(FlowTestsBase):
         query_to_expected_result = {
             "MATCH (n:Person) WITH n.age AS age, count(n.age) AS cnt ORDER BY age, cnt RETURN sum(age)" : [[90]],
             "MATCH (n:Person) WITH n.age AS age, count(n.age) AS cnt ORDER BY n.age, count(n.age) RETURN sum(age)" : [[90]],
-            "MATCH (n:Person) WITH n.age AS age, count(n.age) AS cnt ORDER BY n.age+2 RETURN sum(age)" : [[90]],
-            # "MATCH (n:Person) WITH n.age AS age, count(n.age) AS cnt ORDER BY n.age+count(n.age) RETURN sum(age)" : [[90]],
+            "MATCH (n:Person) WITH n.age AS age, count(n.age) AS cnt ORDER BY n.age + 2 RETURN sum(age)" : [[90]],
+            # "MATCH (n:Person) WITH n.age AS age, count(n.age) AS cnt ORDER BY n.age + count(n.age) RETURN sum(age)" : [[90]],
             # "CYPHER offset=10 MATCH (n:Person) WITH n.age AS age, count(n.age) AS cnt ORDER BY $offset+count(n.age) RETURN sum(age)" : [[90]],
         }
         for query, expected_result in query_to_expected_result.items():
             self.get_res_and_assertEquals(query, expected_result)
 
         # test invalid queries
-        aggregation_error_message = "In a WITH/RETURN with an aggregation, it is not possible to access variables not projected by the WITH/RETURN."
+        variable_agg_error = "Ambiguous Aggregation Expression: in a WITH/RETURN with an aggregation, it is not possible to access variables not projected by the WITH/RETURN."
+        function_agg_error = "Ambiguous Aggregation Expression: in a WITH/RETURN with an aggregation, it is not possible to use aggregation functions different to the projected by the WITH."
         queries_with_errors = {
-            "MATCH (n:Person) WITH n.id AS age, count(n.age) AS cnt ORDER BY n RETURN 1" : aggregation_error_message,
-            "MATCH (n:Person) WITH n.id AS age, count(n.age) AS cnt ORDER BY n.name RETURN 1" : aggregation_error_message,
-            # "MATCH (n:Person) WITH n.id AS age, count(n.age) AS cnt ORDER BY max(n.id) RETURN 1" : aggregation_error_message,
+            "MATCH (n:Person) WITH n.id AS age, count(n.age) AS cnt ORDER BY n RETURN 1" : variable_agg_error,
+            "MATCH (n:Person) WITH n.id AS age, count(n.age) AS cnt ORDER BY n.name RETURN 1" : variable_agg_error,
+            "MATCH (n:Person) WITH n.id AS age, count(n.age) AS cnt ORDER BY max(n.id) RETURN 1" : function_agg_error,
+            "MATCH (n:Person) WITH n.id AS age, count(n.age) AS cnt ORDER BY sum(count(n.id)) RETURN 1" : function_agg_error,
             "MATCH (n:Person) WITH n.id AS age, count(n.age) ORDER BY n RETURN 1" : "WITH clause projections must be aliased",
             "MATCH (n:Person) WITH n.id AS age, count(n.age) AS cnt ORDER BY n.id RETURN sum(n.age)" : "n not defined",
+            "MATCH (n:Person) RETURN count(n.age) AS agg ORDER BY n.age + count(n.age)" : variable_agg_error,
+            # "MATCH (n: Person) RETURN n.age + n.age, count(*) AS cnt ORDER BY n.age + n.age + count(*)" : "", 
         }
         for query, expected_result in queries_with_errors.items():
             self.expect_error(query, expected_result)
