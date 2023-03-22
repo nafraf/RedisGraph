@@ -100,17 +100,21 @@ AR_ExpNode **_BuildProjectionExpressions(const cypher_astnode_t *clause) {
 	return expressions;
 }
 
-// Add WITH LHS projections to projection_names rax
-static void _add_WITH_LHS_projections
-(
-	const cypher_astnode_t *clause, //
-	rax *projection_names		    // rax projection names
-) {
+// Collect LHS of "AS" projected entities. 
+// "WITH me.age AS x" will just collect "me.age".
+AR_ExpNode **_BuildWithLHSProjectionExpressions(const cypher_astnode_t *clause) {
 	uint count = 0;
+	AR_ExpNode **expressions = NULL;
 	cypher_astnode_type_t t = cypher_astnode_type(clause);
 
 	if(t == CYPHER_AST_WITH) {
+		ASSERT(cypher_ast_with_has_include_existing(clause) == false);
 		count = cypher_ast_with_nprojections(clause);
+
+		expressions = array_new(AR_ExpNode *, count);
+
+		rax *rax = raxNew();
+
 		for(uint i = 0; i < count; i++) {
 			const cypher_astnode_t *projection = NULL;
 			projection = cypher_ast_with_get_projection(clause, i);
@@ -118,37 +122,31 @@ static void _add_WITH_LHS_projections
 			// The AST expression can be an identifier, function call, or constant
 			const cypher_astnode_t *ast_exp = cypher_ast_projection_get_expression(projection);
 
-			// Add to rax the LHS of "AS" projected entities. "WITH a AS x" will just collect "a".
-			const char *resolved_name = NULL;
-			cypher_astnode_type_t type1 = cypher_astnode_type(projection);
-			cypher_astnode_type_t type = cypher_astnode_type(ast_exp);
-
-			if(type == CYPHER_AST_PROPERTY_OPERATOR) {
-				//--------------------------------------------------------------------------
-				// Extract entity and property name expressions.
-				//--------------------------------------------------------------------------
-				const cypher_astnode_t *prop_expr = cypher_ast_property_operator_get_expression(ast_exp);
-				const cypher_astnode_t *prop_name_node = cypher_ast_property_operator_get_prop_name(ast_exp);
-				const char *prop_name = cypher_ast_prop_name_get_value(prop_name_node);
-
-				if(cypher_astnode_type(prop_expr) == CYPHER_AST_IDENTIFIER) {
-					const char *alias = cypher_ast_identifier_get_name(prop_expr);
-					uint len_resolved_name = strlen(alias)+strlen(prop_name)+2;
-					char *resolved_name = rm_malloc(sizeof(char)*(len_resolved_name));
-					snprintf(resolved_name, len_resolved_name, "%s.%s", alias, prop_name);
-					raxTryInsert(projection_names, (unsigned char *)resolved_name, strlen(resolved_name), NULL, NULL);
+			// Construction an AR_ExpNode to represent this projected entity.
+			AR_ExpNode *exp = AR_EXP_FromASTNode(ast_exp);
+			const char *entity_alias = exp->operand.variadic.entity_alias;
+			
+			// There are some types of expressions where the resolved_name is NULL, in that case, we are not checking duplicates
+			if(exp->resolved_name != NULL) {
+				if(raxTryInsert(rax, (unsigned char *)exp->resolved_name, strlen(exp->resolved_name), NULL, NULL) != 0) {
+					array_append(expressions, exp);
 				}
-			} else if (type == CYPHER_AST_APPLY_OPERATOR) {
-				//TO DO: Add aggregate functions: 
-				// "WITH avg(a) AS x" will just collect "avg(a)"
-				// "WITH max(me.age+round(me.age)*2) as max_age" will just collect "WITH max(me.age+round(me.age)*2)"
+			} else {
+				array_append(expressions, exp);
 			}
 		}
+		raxFree(rax);
 	}
+
+	return expressions;
 }
 
-// Validate if order expression is part of projection expressions
-bool _validateOrderExpression(AR_ExpNode *order_exp, rax *projection_names) {
+// Validate if order expression is part of projection expressions or with lhs projected expressions
+bool _validateOrderExpression(AR_ExpNode *order_exp, AR_ExpNode **project_exps, AR_ExpNode **with_lhs_proj) {
+	bool found = false;
+	uint project_count = array_len(project_exps);
+	uint with_lhs_proj_count = array_len(with_lhs_proj);
+
 	if(order_exp->type == AR_EXP_OPERAND) {
 		AR_OperandNodeType type = order_exp->operand.type;
 		switch(type) {
@@ -157,14 +155,14 @@ bool _validateOrderExpression(AR_ExpNode *order_exp, rax *projection_names) {
 				break;
 			case AR_EXP_VARIADIC:
 				const char *entity_alias = order_exp->operand.variadic.entity_alias;
-				if(raxFind(projection_names, (unsigned char *)entity_alias, strlen(entity_alias)) != raxNotFound) {
-					return true;
+				for(uint j = 0; j < project_count && !found; j++) {
+					found = (strcmp(entity_alias, project_exps[j]->resolved_name) == 0);
 				}
 				break;
 			case AR_EXP_PARAM:
 				const char *param_name = order_exp->operand.param_name;
-				if(raxFind(projection_names, (unsigned char *)param_name, strlen(param_name)) != raxNotFound) {
-					return true;
+				for(uint j = 0; j < project_count && !found; j++) {
+					found = AR_EXP_Equal(order_exp, project_exps[j]);
 				}
 				break;
 			case AR_EXP_BORROW_RECORD:
@@ -176,41 +174,40 @@ bool _validateOrderExpression(AR_ExpNode *order_exp, rax *projection_names) {
 				ASSERT(false);
 		}
 	} else if(order_exp->type == AR_EXP_OP) {
-		printf("Nafraf order_exp->type == AR_EXP_OP, %s, resolved_name=%s\n", order_exp->op.f->name, order_exp->resolved_name);
 
-		if(strcmp(AR_EXP_GetFuncName(order_exp), "property") == 0) {
-			// Validate using resolved_name
-			const char *identifer = order_exp->resolved_name;
-			if(raxFind(projection_names, (unsigned char *)identifer, strlen(identifer)) != raxNotFound) {
-				return true;
-			}
-		} else {
-			bool children_valid = true;
+		for(uint j = 0; j < project_count && !found; j++) {
+			found = AR_EXP_Equal(order_exp, project_exps[j]);
+		}
+		for(uint k = 0; k < with_lhs_proj_count && !found; k++) {
+			found = AR_EXP_Equal(order_exp, with_lhs_proj[k]);
+		}
+		if(!found) {
 			for(uint i = 0; i < order_exp->op.child_count; i++){
 				AR_ExpNode *child = order_exp->op.children[i];
-				if (_validateOrderExpression(child, projection_names) == false) {
+				if (_validateOrderExpression(child, project_exps, with_lhs_proj) == false) {
 					return false;
 				}
 			}
+			return true;
 		}
-		
-		return true;
 	}
-	return false;
+	return found;
 }
 
 // Merge all order expressions into the projections array without duplicates,
 static void _combine_projection_arrays
 (
-	AR_ExpNode ***exps_ptr,   // projection expressions
-	AR_ExpNode **order_exps,  // expressions in ORDER BY clause
-	bool aggregate,           // is an agg-func used in one of the projections
-	rax *projection_names     // 
+	AR_ExpNode ***exps_ptr,     // projection expressions
+	AR_ExpNode **order_exps,    // expressions in ORDER BY clause
+	bool aggregate,             // is an agg-func used in one of the projections
+	AR_ExpNode **with_lhs_proj  // LHS expressions of WITH clause
 ) {
 	
+	rax *projection_names = raxNew();
 	AR_ExpNode **project_exps = *exps_ptr;
 	uint order_count = array_len(order_exps);
 	uint project_count = array_len(project_exps);
+	uint with_lhs_proj_count = array_len(with_lhs_proj);
 
 	// Add all WITH/RETURN projection names to rax
 	for(uint i = 0; i < project_count; i ++) {
@@ -228,25 +225,30 @@ static void _combine_projection_arrays
 							   project_exps[j]->resolved_name) == 0 ||
 						AR_EXP_Equal(order_exps[i], project_exps[j]);
 			}
+			for(uint k = 0; k < with_lhs_proj_count && !found; k++) {
+				found = AR_EXP_Equal(order_exps[i], with_lhs_proj[k]);
+			}
 			if(!found) {
-				if(_validateOrderExpression(order_exps[i], projection_names)) {
+				if(_validateOrderExpression(order_exps[i], project_exps, with_lhs_proj)) {
 					continue;
 				}
-				ErrorCtx_SetError("In a WITH/RETURN with an aggregation,\
+				ErrorCtx_SetError("In a WITH/RETURN with an aggregation, \
 it is not possible to access variables not projected by the WITH/RETURN.");
 			}
 		}
 	}
-
 
 	// Merge non-duplicate order expressions into projection array.
 	for(uint i = 0; i < order_count; i ++) {
 		const char *name = order_exps[i]->resolved_name;
 		int new_name = raxTryInsert(projection_names, (unsigned char *)name, strlen(name), NULL, NULL);
 		// If it is a new projection, add a clone to the array.
-		if(new_name) array_append(project_exps, AR_EXP_Clone(order_exps[i]));
+		if(new_name) {
+			array_append(project_exps, AR_EXP_Clone(order_exps[i]));
+		}
 	}
 
+	raxFree(projection_names);
 	*exps_ptr = project_exps;
 }
 
@@ -262,6 +264,7 @@ static inline void _buildProjectionOps(ExecutionPlan *plan,
 	int                     *sort_directions  =  NULL  ;
 	AR_ExpNode              **order_exps      =  NULL  ;
 	AR_ExpNode              **projections     =  NULL  ;
+	AR_ExpNode              **with_lhs_proj   =  NULL  ;
 	const cypher_astnode_t  *skip_clause      =  NULL  ;
 	const cypher_astnode_t  *limit_clause     =  NULL  ;
 	const cypher_astnode_t  *order_clause     =  NULL  ;
@@ -299,13 +302,11 @@ static inline void _buildProjectionOps(ExecutionPlan *plan,
 		AST_PrepareSortOp(order_clause, &sort_directions);
 		order_exps = _BuildOrderExpressions(projections, order_clause);
 
-		rax *projection_names = raxNew();
 		if(aggregate) {
-			_add_WITH_LHS_projections(clause, projection_names);
+			with_lhs_proj = _BuildWithLHSProjectionExpressions(clause);
 		}
 		// Merge order expressions into the projections array.
-		_combine_projection_arrays(&projections, order_exps, aggregate, projection_names);
-		raxFree(projection_names);
+		_combine_projection_arrays(&projections, order_exps, aggregate, with_lhs_proj);
 	}
 
 	// our fundamental operation will be a projection or aggregation
