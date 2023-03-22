@@ -166,6 +166,17 @@ static AR_ExpNode *_AR_EXP_FromPropertyExpression(const cypher_astnode_t *expr) 
 	AR_ExpNode *entity = _AR_EXP_FromASTNode(prop_expr);
 	AR_ExpNode *root = AR_EXP_NewAttributeAccessNode(entity, prop_name);
 
+	//--------------------------------------------------------------------------
+	// Set root->resolved_name
+	//--------------------------------------------------------------------------
+	if(cypher_astnode_type(prop_expr) == CYPHER_AST_IDENTIFIER) {
+		const char *alias = cypher_ast_identifier_get_name(prop_expr);
+		uint len_resolved_name = strlen(alias)+strlen(prop_name)+2;
+		char *resolved_name = rm_malloc(sizeof(char)*(len_resolved_name));
+		snprintf(resolved_name, len_resolved_name, "%s.%s", alias, prop_name);
+		root->resolved_name = resolved_name;
+	}
+	
 	return root;
 }
 
