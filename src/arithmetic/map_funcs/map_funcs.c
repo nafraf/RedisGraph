@@ -100,6 +100,21 @@ SIValue AR_MERGEMAP(SIValue *argv, int argc, void *private_data) {
 	}
 }
 
+// map.fromList(baseMap, [keyStr, val, ...]) → map
+SIValue AR_FROMLIST(SIValue *argv, int argc, void *private_data) {
+	return SI_NullVal();
+}
+
+// map.fromTwoLists(baseMap, [keyStr, ...], [val, ...]) → map
+SIValue AR_FROMTWOLISTS(SIValue *argv, int argc, void *private_data) {
+	return SI_NullVal();
+}
+
+// map.fromPairs(baseMap, [[keyStr, val], ...]) → map
+SIValue AR_FROMPAIRS(SIValue *argv, int argc, void *private_data) {
+	return SI_NullVal();
+}
+
 void Register_MapFuncs() {
 	SIType *types;
 	SIType ret_type;
@@ -129,5 +144,27 @@ void Register_MapFuncs() {
 	ret_type = T_NULL | T_MAP;
 	func_desc = AR_FuncDescNew("merge_maps", AR_MERGEMAP, 2, 2, types, ret_type, true, true);
 	AR_RegFunc(func_desc);
+
+	types = array_new(SIType, 2);
+	array_append(types, T_NULL | T_MAP);
+	array_append(types, T_ARRAY);
+	ret_type = T_NULL | T_MAP;
+	func_desc = AR_FuncDescNew("map.fromList", AR_FROMLIST, 2, 2, types, ret_type, true, true);
+	AR_RegFunc(func_desc);
+
+	types = array_new(SIType, 3);
+	array_append(types, T_NULL | T_MAP);
+	array_append(types, T_ARRAY);
+	array_append(types, T_ARRAY);
+	ret_type = T_NULL | T_MAP;
+	func_desc = AR_FuncDescNew("map.fromTwoList", AR_FROMTWOLISTS, 3, 3, types, ret_type, true, true);
+	AR_RegFunc(func_desc);
+
+	types = array_new(SIType, 2);
+	array_append(types, T_NULL | T_MAP);
+	array_append(types, T_ARRAY);
+	ret_type = T_NULL | T_MAP;
+	func_desc = AR_FuncDescNew("map.fromPairs", AR_FROMPAIRS, 2, 2, types, ret_type, true, true);
+	AR_RegFunc(func_desc);	
 }
 
