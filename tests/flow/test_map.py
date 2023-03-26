@@ -17,6 +17,20 @@ class testMap(FlowTestsBase):
         # (v1)-[:E]->(v2)-[:E]->(v3)
         q = """CREATE (:L {val:1})-[:E]->(:L {val:2})-[:E]->(:L {val:3})"""
         redis_graph.query(q)
+    
+    def expect_error(self, query, expected_err_msg):
+        try:
+            redis_graph.query(query)
+            assert(False)
+        except redis.exceptions.ResponseError as e:
+            self.env.assertIn(expected_err_msg, str(e))
+
+    def expect_type_error(self, query):
+        self.expect_error(query, "Type mismatch")
+    
+    def get_res_and_assertEquals(self, query, expected_result):
+        actual_result = redis_graph.query(query)
+        self.env.assertEquals(actual_result.result_set, expected_result)
 
     # Validate basic map lookup operations
     def test01_basic_map_accesses(self):
@@ -222,3 +236,44 @@ class testMap(FlowTestsBase):
         query_result = redis_graph.query(query)
         expected_result = [['XX']]
         self.env.assertEquals(query_result.result_set, expected_result)
+
+    # validate map.fromList()
+    def test09_map_from_list(self):
+        # test type mismatch
+        queries = [
+            """RETURN map.fromList({}, null)""",
+            """RETURN map.fromList(null, ['a', 1])""",
+            """RETURN map.fromList(null, [{a: 1}, 2])""",
+            """RETURN map.fromList(null, [['a'], 3])""",
+            ]
+        for query in queries:
+            self.expect_type_error(query)
+        
+        # test valid inputs
+        query_to_expected_result = {
+            "RETURN map.fromList({}, [])": [[{}]],
+            "RETURN map.fromList({a: 1, b: 2}, [])": [[{'a' : 1, 'b': 2}]],
+            "RETURN map.fromList({}, ['a', 7, 'b', 'afp'])": [[{'a' : 7, 'b': 'afp'}]],
+            # on duplicated keys: the las value is applied
+            "RETURN map.fromList({}, ['a', 1, 'a', 3])": [[{'a' : 3}]],
+            # if val is null - the pair is not added to the map, or removed when key is in baseMap
+            "RETURN map.fromList({}, ['c', 7, 'c', null])": [[{}]],
+            "RETURN map.fromList({a: 1}, ['c', 7, 'c', null])": [[{'a': 1}]],
+            "RETURN map.fromList({a: 1, b: 2}, ['b', null, 'a', 3])": [[{'a': 3}]],
+            # keys are converted to string using tostring()
+            "RETURN map.fromList({a: 1, b: 2}, [1, 2, 3, 4])": [[{'a': 1, 'b': 2, '1': 2, '3': 4}]],
+            # if key is null - the pair is skipped
+            "RETURN map.fromList({a: 1, b: 2}, [null, 'abc', 'a', 3, null, 3])": [[{'a': 3, 'b': 2}]],
+        }
+        for query, expected_result in query_to_expected_result.items():
+            self.get_res_and_assertEquals(query, expected_result)
+        
+        # test list length
+        query = """RETURN map.fromList({a: 1, b: 2}, [1, 2, 3])"""
+        self.expect_error(query, "List containing keyStr and values expects even number of elements")
+
+    # validate map.fromTwoList()
+    # def test10_map_from_two_lists(self):
+    
+    # validate map.fromPairs
+    # def test11_map_from_pairs(self):
