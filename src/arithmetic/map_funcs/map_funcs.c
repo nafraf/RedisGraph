@@ -113,8 +113,8 @@ SIValue AR_FROMLIST(SIValue *argv, int argc, void *private_data) {
 		ErrorCtx_RaiseRuntimeException("List containing keyStr and values expects even number of elements");
 	}
 
-	SIValue list  = argv[1];
-	SIValue map   = Map_Clone(argv[0]);
+	SIValue list = argv[1];
+	SIValue map  = Map_Clone(argv[0]);
 
 	for(int i = 0; i < arrayLen; i += 2) {
 		SIValue key = SIArray_Get(list, i);
@@ -149,15 +149,39 @@ SIValue AR_FROMTWOLISTS(SIValue *argv, int argc, void *private_data) {
 	ASSERT(SI_TYPE(argv[0]) == T_MAP && SI_TYPE(argv[1]) == T_ARRAY && SI_TYPE(argv[2]) == T_ARRAY);
 
 	uint32_t keyCount = SIArray_Length(argv[1]);
-	if(keyCount != SIArray_Length(argv[1])) {
-		ErrorCtx_RaiseRuntimeException("number of keys must be equal to the number of values");
+	if(keyCount != SIArray_Length(argv[2])) {
+		ErrorCtx_RaiseRuntimeException("Number of keys must be equal to the number of values");
 	}
 
-	for(int i = 0; i < keyCount; i += 2) {
-		
-	}
+	SIValue keys = argv[1];
+	SIValue vals = argv[2];
+	SIValue map  = Map_Clone(argv[0]);
 
-	return SI_NullVal();
+	for(int i = 0; i < keyCount; i++) {
+		SIValue key = SIArray_Get(keys, i);
+		// if key is null - the pair is skipped
+		if(SI_TYPE(key) == T_NULL) {
+			continue;
+		}
+		// make sure key is a string
+		if(SI_TYPE(key) != T_STRING) {
+			SIValue keystr = AR_TOSTRING(&key, 1, NULL);
+			if(SI_TYPE(keystr) == T_NULL) {
+				Error_SITypeMismatch(key, T_STRING);
+				break;
+			}
+			SIValue_Free(key);
+			key = SI_CloneValue(keystr);
+		}
+		SIValue val = SIArray_Get(vals, i);
+		// update map
+		if(SI_TYPE(val) == T_NULL) {
+			Map_Remove(map, key);
+		} else {
+			Map_Add(&map, key, val);
+		}
+	}
+	return map;
 }
 
 // map.fromPairs(baseMap, [[keyStr, val], ...]) → map
@@ -209,7 +233,7 @@ void Register_MapFuncs() {
 	array_append(types, T_ARRAY);
 	array_append(types, T_ARRAY);
 	ret_type = T_NULL | T_MAP;
-	func_desc = AR_FuncDescNew("map.fromTwoList", AR_FROMTWOLISTS, 3, 3, types, ret_type, false, true);
+	func_desc = AR_FuncDescNew("map.fromTwoLists", AR_FROMTWOLISTS, 3, 3, types, ret_type, false, true);
 	AR_RegFunc(func_desc);
 
 	types = array_new(SIType, 2);

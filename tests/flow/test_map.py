@@ -273,7 +273,33 @@ class testMap(FlowTestsBase):
         self.expect_error(query, "List containing keyStr and values expects even number of elements")
 
     # validate map.fromTwoList()
-    # def test10_map_from_two_lists(self):
+    def test10_map_from_two_lists(self):
+        # test type mismatch
+        queries = [
+            """RETURN map.fromTwoLists({}, [], null)""",
+            """RETURN map.fromTwoLists({}, null, [])""",
+            """RETURN map.fromTwoLists(null, [], [])""",
+            """RETURN map.fromTwoLists(null, [{a: 1}], [1])""",
+            """RETURN map.fromTwoLists(null, [['a']], [3])""",
+            ]
+        for query in queries:
+            self.expect_type_error(query)
+
+        # TO DO:
+        # test valid inputs
+        # query_to_expected_result = {
+        # }
+        # for query, expected_result in query_to_expected_result.items():
+        #     self.get_res_and_assertEquals(query, expected_result)
+
+        # A list of queries and errors which are expected to occur with the
+        # specified query.
+        queries_with_errors = {
+            """RETURN map.fromTwoLists({}, [], ['a'])""" : "Number of keys must be equal to the number of values",
+            """RETURN map.fromTwoLists({}, ['a'], [])""" : "Number of keys must be equal to the number of values"
+        }
+        for query, error in queries_with_errors.items():
+            self.expect_error(query, error)
     
     # validate map.fromPairs
     # def test11_map_from_pairs(self):
