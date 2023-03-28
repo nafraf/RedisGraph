@@ -243,7 +243,7 @@ static void _buildForeachOp
 	// unwind foreach list expression
 	AR_ExpNode *exp = AR_EXP_FromASTNode(
 		cypher_ast_foreach_get_expression(clause));
-	exp->resolved_name = cypher_ast_identifier_get_name(
+	exp->alias = cypher_ast_identifier_get_name(
 		cypher_ast_foreach_get_identifier(clause));
 	OpBase *unwind = NewUnwindOp(embedded_plan, exp);
 
