@@ -13,6 +13,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <ctype.h>
+#include "errors.h"
 #include <sys/param.h>
 #include "util/rmalloc.h"
 #include "datatypes/map.h"
@@ -498,7 +499,14 @@ SIValue SIValue_Subtract(const SIValue a, const SIValue b) {
 SIValue SIValue_Multiply(const SIValue a, const SIValue b) {
 	/* Only construct an integer return if both operands are integers. */
 	if(SI_TYPE(a) & SI_TYPE(b) & T_INT64) {
-		return SI_LongVal(a.longval * b.longval);
+		int8_t sa = SIGN(a.longval);
+		int8_t sb = SIGN(b.longval);
+		int64_t result = a.longval * b.longval;
+		if((int8_t)SIGN(result) != SIGN(sa * sb)) {
+			ErrorCtx_SetError("Integer overflow");
+			return SI_NullVal();
+		}
+		return SI_LongVal(result);
 	}
 	/* Return a double representation. */
 	return SI_DoubleVal(SI_GET_NUMERIC(a) * SI_GET_NUMERIC(b));
@@ -506,7 +514,14 @@ SIValue SIValue_Multiply(const SIValue a, const SIValue b) {
 
 SIValue SIValue_Divide(const SIValue a, const SIValue b) {
 	if(SI_TYPE(a) & SI_TYPE(b) & T_INT64) {
-		return SI_LongVal(SI_GET_NUMERIC(a) / SI_GET_NUMERIC(b));
+		int8_t sa = SIGN(SI_GET_NUMERIC(a));
+		int8_t sb = SIGN(SI_GET_NUMERIC(b));
+		int64_t result = SI_GET_NUMERIC(a) / SI_GET_NUMERIC(b);
+		if((int8_t)SIGN(result) != SIGN(sa * sb)) {
+			ErrorCtx_SetError("Integer overflow");
+			return SI_NullVal();
+		}
+		return SI_LongVal(result);
 	}
 	return SI_DoubleVal(SI_GET_NUMERIC(a) / (double)SI_GET_NUMERIC(b));
 }

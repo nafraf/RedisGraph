@@ -1754,6 +1754,14 @@ class testFunctionCallsFlow(FlowTestsBase):
         }
         for query, expected_result in query_to_expected_result.items():
             self.get_res_and_assertEquals(query, expected_result)
+        
+        queries = {
+            "RETURN SIGN(--9223372036854775808)",
+            "RETURN SIGN(-9223372036854775808*-1)",
+            "RETURN SIGN(-1 * -9223372036854775808)",
+        }
+        for query in queries:
+            self.expect_error(query, "Integer overflow")
 
     def test60_Pow(self):
         query_to_expected_result = {
@@ -2714,3 +2722,37 @@ class testFunctionCallsFlow(FlowTestsBase):
         query = """RETURN string.replaceRegEx('bl😉a', '😉', '😀')"""
         actual_result = graph.query(query)
         self.env.assertEquals(actual_result.result_set[0], expected_result)
+
+    def test93_signed_int64_limits(self):
+        # 64-bit signed integer:
+        # LONG_MIN       = -9223372036854775808
+        # LONG_MAX       = +9223372036854775807
+
+        # Test integer overflow
+        queries = {
+            # Multiplication
+            "RETURN (--9223372036854775808)",
+            "RETURN (-9223372036854775808 * -1)",
+            "RETURN (-1 * -9223372036854775808)",
+            "RETURN (-9223372036854775809)",
+            "RETURN (9223372036854775808)",
+            # Division
+            "RETURN (9223372036854775808 / 1)",
+            "RETURN (-9223372036854775808 / -1)",
+            # Addition
+            # "RETURN (+9223372036854775807 + 1)",
+            # Substraction
+            # "RETURN (-9223372036854775808 - 1)",
+        }
+        for query in queries:
+            self.expect_error(query, "Integer overflow")
+
+        # Test edge cases
+        query_to_expected_result = {
+            "RETURN (-9223372036854775808)" : [[-9223372036854775808]],
+            "RETURN (+9223372036854775807)" : [[9223372036854775807]],
+            "RETURN (-9223372036854775808 * 1)" : [[-9223372036854775808]],
+            "RETURN (+9223372036854775807 * 1)" : [[9223372036854775807]],
+        }
+        for query, expected_result in query_to_expected_result.items():
+            self.get_res_and_assertEquals(query, expected_result)
