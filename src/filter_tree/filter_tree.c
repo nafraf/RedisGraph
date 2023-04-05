@@ -1149,6 +1149,46 @@ void FilterTree_Print
 	_FilterTree_Print(root, 0);
 }
 
+void FilterTree_ToString
+(
+	const FT_FilterNode *root,
+	sds *buff
+) {
+	ASSERT(root && buff && *buff);
+
+	char *exp = NULL;
+	char *left = NULL;
+	char *right = NULL;
+
+	if(root == NULL) return;
+
+	switch(root->t) {
+		case FT_N_EXP:
+			AR_EXP_ToString(root->exp.exp, &exp);
+			*buff = sdscatprintf(*buff, "%s ",  exp);
+			// *buff = sdscatprintf(*buff, "%s ",  root->exp.exp->resolved_name);
+			rm_free(exp);
+			break;
+		case FT_N_PRED:
+			AR_EXP_ToString(root->pred.lhs, &left);
+			AR_EXP_ToString(root->pred.rhs, &right);
+			*buff = sdscatprintf(*buff, "%s %d %s ",  left, root->pred.op, right);
+			// *buff = sdscatprintf(*buff, "%s (%d) %s ",  root->pred.lhs->resolved_name, root->pred.op, root->pred.rhs->resolved_name);
+			rm_free(left);
+			rm_free(right);
+			break;
+		case FT_N_COND:
+			*buff = sdscatprintf(*buff, "%d ", root->cond.op);
+			FilterTree_ToString(LeftChild(root), buff);
+			FilterTree_ToString(RightChild(root), buff);
+			break;
+		default:
+			ASSERT(false);
+			break;
+	}
+	
+}
+
 void FilterTree_Free
 (
 	FT_FilterNode *root
