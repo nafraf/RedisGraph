@@ -1167,14 +1167,12 @@ void FilterTree_ToString
 		case FT_N_EXP:
 			AR_EXP_ToString(root->exp.exp, &exp);
 			*buff = sdscatprintf(*buff, "%s",  exp);
-			// *buff = sdscatprintf(*buff, "%s ",  root->exp.exp->resolved_name);
 			rm_free(exp);
 			break;
 		case FT_N_PRED:
 			AR_EXP_ToString(root->pred.lhs, &left);
 			AR_EXP_ToString(root->pred.rhs, &right);
 			*buff = sdscatprintf(*buff, "%s %s %s", left, ASTOpToSymbolString(root->pred.op), right);
-			// *buff = sdscatprintf(*buff, "%s (%d) %s ",  root->pred.lhs->resolved_name, root->pred.op, root->pred.rhs->resolved_name);
 			rm_free(left);
 			rm_free(right);
 			break;

@@ -21,13 +21,6 @@ static void FilterToString(
 
 	*buf = sdscatprintf(*buf, "%s | ", op->op.name);
 	FilterTree_ToString(op->filterTree, buf);
-	
-	// AR_EXP_ToString(op->filterTree->exp.exp, &exp_str);
-	// printf("Nafraf: AR_EXP_ToString: %s\n", exp_str);
-	// const char* alias = op->filterTree->exp.exp->resolved_name;
-	// printf("Nafraf: alias=%s\n", alias);
-	// *buf = sdscatprintf(*buf, "%s", exp_str);
-	// rm_free(exp_str);
 }
 
 OpBase *NewFilterOp(const ExecutionPlan *plan, FT_FilterNode *filterTree) {

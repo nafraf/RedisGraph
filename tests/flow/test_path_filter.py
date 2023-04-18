@@ -290,7 +290,6 @@ class testPathFilter(FlowTestsBase):
         # Write a WHERE clause that evaluates a predicate on a node and a path filter.
         query = "MATCH (a:L) WHERE (a)-[]->() AND a.x = 'a' return a.x"
         plan_1 = redis_graph.execution_plan(query)
-
         # The predicate filter should be evaluated between the Apply and Scan ops.
         # Results
         #     Project
