@@ -194,3 +194,22 @@ class testGraphCreationFlow(FlowTestsBase):
             result = redis_graph.query(query)
             expected_result = [[0]]
             self.env.assertEquals(result.result_set, expected_result)
+
+    def test10_create_reuse_delete_var(self):
+        # Queries that reference nodes/edges that were deleted previously should emit an error.
+
+        # tests reusing deleted nodes
+        queries = ["CREATE (x) DELETE x CREATE (x)<-[:A]-()",
+                   "CREATE (x) DELETE x CREATE ()<-[:A]-(x)",
+                  ]
+        for query in queries:
+            self._assert_exception(redis_graph, query,
+                "The bound variable 'x' can't be redeclared in a CREATE clause, it was deleted.")
+
+        # tests reusing deleted edges
+        # queries = ["CREATE (x)-[r]->(x) DELETE r CREATE (c)<-[r:A]-(d)",
+        #            "MATCH (x)-[r]->(x) DELETE r CREATE (c)<-[r:A]-(d)",
+        #           ]
+        # for query in queries:
+        #     self._assert_exception(redis_graph, query,
+        #         "The bound variable 'x' can't be redeclared in a CREATE clause, it was deleted.")
