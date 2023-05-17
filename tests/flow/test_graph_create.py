@@ -195,20 +195,43 @@ class testGraphCreationFlow(FlowTestsBase):
             expected_result = [[0]]
             self.env.assertEquals(result.result_set, expected_result)
 
-    def test10_create_reuse_delete_var(self):
+    def test11_create_reuse_delete_var(self):
         # Queries that reference nodes/edges that were deleted previously should emit an error.
 
         # tests reusing deleted nodes
-        queries = ["CREATE (x) DELETE x CREATE (x)<-[:A]-()",
-                   "CREATE (x) DELETE x CREATE ()<-[:A]-(x)",
+        queries = ["MERGE (x) DELETE x MERGE (x)<-[:R]-()",
+                   "MERGE (x) DELETE x CREATE (x)<-[:R]-()",
+                   "CREATE (x) DELETE x MERGE (x)<-[:R]-()",
+                   "CREATE (x) DELETE x CREATE ()<-[:R]-(x)",
+                   "MERGE (a) WITH a AS x DELETE x MERGE ()<-[:R]-(x)",
+                   "MERGE (a) WITH a AS x DELETE x CREATE ()<-[:R]-(x)",
+                   "CREATE (a) WITH a AS x DELETE x MERGE ()<-[:R]-(x)",
+                   "CREATE (a) WITH a AS x DELETE x CREATE ()<-[:R]-(x)",
                   ]
         for query in queries:
             self._assert_exception(redis_graph, query,
                 "The bound variable 'x' can't be redeclared in a CREATE clause, it was deleted.")
 
         # tests reusing deleted edges
-        # queries = ["CREATE (x)-[r]->(x) DELETE r CREATE (c)<-[r:A]-(d)",
-        #            "MATCH (x)-[r]->(x) DELETE r CREATE (c)<-[r:A]-(d)",
+        queries = ["MERGE ()-[r:R]->() WITH r AS e DELETE e CREATE (c)<-[e:R]-(d)",
+                   "CREATE ()-[r:R]->() WITH r AS e DELETE e CREATE ()<-[e:R]-()",
+                  ]
+        for query in queries:
+            self._assert_exception(redis_graph, query,
+                "The bound variable 'e' can't be redeclared in a CREATE clause, it was deleted.")
+
+        #TODO
+        # test returning deleted nodes
+        # queries = ["CREATE (x) DELETE x RETURN x",
+        #            "CREATE (x)-[r:R]->() DELETE x RETURN x",
+        #           ]
+        # for query in queries:
+        #     self._assert_exception(redis_graph, query,
+        #         "The bound variable 'x' can't be redeclared in a CREATE clause, it was deleted.")
+
+        #TODO
+        # test returning deleted edges
+        # queries = ["CREATE ()-[r:R]->() DELETE r RETURN r",
         #           ]
         # for query in queries:
         #     self._assert_exception(redis_graph, query,
