@@ -174,7 +174,7 @@ void EvalEntityUpdates
 		// create a new update context
 		update = rm_malloc(sizeof(PendingUpdateCtx));
 		update->ge            = entity;
-		update->attributes    = AttributeSet_ShallowClone(*entity->attributes);
+		update->attributes    = AttributeSet_ShallowClone(GraphEntity_GetAttributes(entity));
 		update->add_labels    = NULL;
 		update->remove_labels = NULL;
 		// add update context to updates dictionary
