@@ -1867,3 +1867,18 @@ updating clause.")
         self.env.assertEquals(res.result_set[1][0], n2)
         self.env.assertEquals(res.result_set[1][1], n3)
         self.env.assertEquals(res.result_set[1][2], 1)
+
+    def test31_return_literals(self):
+        """returning literals inside CALL{} must be aliased"""
+        queries = [
+            "CALL {RETURN 1} RETURN 0",
+            "CALL {RETURN 'a'} RETURN 0",
+            "CALL {RETURN 5.7} RETURN 0",
+            "CALL {RETURN 1+2} RETURN 0",
+            "CALL {RETURN true} RETURN 0",
+            "CALL {RETURN sum(0)} RETURN 0",
+            "CALL {MATCH (n) RETURN n.x} RETURN 0",
+            "CALL {MATCH p=(n) RETURN nodes(p)[0]} RETURN 0",
+        ]
+        for query in queries:
+            self.expect_error(query, "must be aliased")

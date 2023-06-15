@@ -1352,12 +1352,12 @@ references to outside variables");
 			const cypher_astnode_t *proj =
 				cypher_ast_return_get_projection(return_clause, i);
 			const char *var_name;
-			const cypher_astnode_t *identifier =
+			const cypher_astnode_t *alias_node =
 				cypher_ast_projection_get_alias(proj);
 			const cypher_astnode_t *exp =
 					cypher_ast_projection_get_expression(proj);
-			if(identifier) {
-				var_name = cypher_ast_identifier_get_name(identifier);
+			if(alias_node) {
+				var_name = cypher_ast_identifier_get_name(alias_node);
 				if(exp &&
 				   cypher_astnode_type(exp) == CYPHER_AST_IDENTIFIER &&
 				   cypher_ast_identifier_get_name(exp)[0] == '@') {
@@ -1365,6 +1365,12 @@ references to outside variables");
 					continue;
 				}
 			} else {
+				// validate expressions that must be aliased
+				cypher_astnode_type_t type = cypher_astnode_type(exp);
+				if(type != CYPHER_AST_IDENTIFIER) {
+					ErrorCtx_SetError("Return projection in CALL {} must be aliased");
+					return VISITOR_BREAK;
+				}
 				var_name = cypher_ast_identifier_get_name(exp);
 			}
 
@@ -1749,13 +1755,25 @@ static VISITOR_STRATEGY _Validate_RETURN_Clause
 
 	// introduce bound vars
 	for(uint i = 0; i < num_return_projections; i ++) {
-		const cypher_astnode_t *child = cypher_ast_return_get_projection(n, i);
-		const cypher_astnode_t *alias_node = cypher_ast_projection_get_alias(child);
-		if(alias_node == NULL) {
-			continue;
+		const cypher_astnode_t *proj = cypher_ast_return_get_projection(n, i);
+		const cypher_astnode_t *identifier =
+			cypher_ast_projection_get_alias(proj);
+		const cypher_astnode_t *exp =
+			cypher_ast_projection_get_expression(proj);
+		const cypher_astnode_t *alias_node =
+			cypher_ast_projection_get_alias(proj);
+		const char *alias = NULL;
+		if (alias_node) {
+			alias = cypher_ast_identifier_get_name(identifier);
+		} else {
+			cypher_astnode_type_t type = cypher_astnode_type(exp);
+			if(type == CYPHER_AST_IDENTIFIER) {
+				alias = cypher_ast_identifier_get_name(exp);
+			}
 		}
-		const char *alias = cypher_ast_identifier_get_name(alias_node);
-		raxInsert(vctx->defined_identifiers, (unsigned char *)alias, strlen(alias), NULL, NULL);
+		if(alias != NULL) {
+			raxInsert(vctx->defined_identifiers, (unsigned char *)alias, strlen(alias), NULL, NULL);
+		}
 	}
 
 	// visit ORDER BY clause

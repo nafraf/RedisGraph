@@ -543,12 +543,25 @@ const char **AST_BuildReturnColumnNames
 	uint projection_count = cypher_ast_return_nprojections(return_clause);
 	const char **columns = array_new(const char *, projection_count);
 	for(uint i = 0; i < projection_count; i++) {
-		const cypher_astnode_t *projection = cypher_ast_return_get_projection(return_clause, i);
-		const cypher_astnode_t *ast_alias = cypher_ast_projection_get_alias(projection);
+		const cypher_astnode_t *projection =
+			cypher_ast_return_get_projection(return_clause, i);
+		const cypher_astnode_t *ast_alias =
+			cypher_ast_projection_get_alias(projection);
+		const cypher_astnode_t *exp =
+					cypher_ast_projection_get_expression(projection);
+		const char *alias = NULL;
+
 		// If the projection was not aliased, the projection itself is an identifier.
-		if(ast_alias == NULL) ast_alias = cypher_ast_projection_get_expression(projection);
-		const char *alias = cypher_ast_identifier_get_name(ast_alias);
-		array_append(columns, alias);
+		if(ast_alias) {
+			alias = cypher_ast_identifier_get_name(ast_alias);
+			array_append(columns, alias);
+		} else {
+			cypher_astnode_type_t type = cypher_astnode_type(exp);
+			if( type == CYPHER_AST_IDENTIFIER) {
+				alias = cypher_ast_identifier_get_name(exp);
+				array_append(columns, alias);
+			}
+		}
 	}
 
 	return columns;
