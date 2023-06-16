@@ -1019,14 +1019,22 @@ static AST_Validation _ValidateUnion_Clauses
 		const char *projections[proj_count];
 
 		for(uint j = 0; j < proj_count; j++) {
-			const cypher_astnode_t *proj = cypher_ast_return_get_projection(return_clause, j);
-			const cypher_astnode_t *alias_node = cypher_ast_projection_get_alias(proj);
-			if(alias_node == NULL)  {
-				// The projection was not aliased, so the projection itself must be an identifier.
-				alias_node = cypher_ast_projection_get_expression(proj);
-				ASSERT(cypher_astnode_type(alias_node) == CYPHER_AST_IDENTIFIER);
+			const char *alias = NULL;
+			const cypher_astnode_t *proj =
+				cypher_ast_return_get_projection(return_clause, j);
+			const cypher_astnode_t *alias_node =
+				cypher_ast_projection_get_alias(proj);
+
+			if(alias_node != NULL)  {
+				alias = cypher_ast_identifier_get_name(alias_node);
+			} else {
+				const cypher_astnode_t *exp =
+					cypher_ast_projection_get_expression(proj);
+				cypher_astnode_type_t type = cypher_astnode_type(exp);
+				if(type == CYPHER_AST_IDENTIFIER) {
+					alias = cypher_ast_identifier_get_name(exp);
+				}
 			}
-			const char *alias = cypher_ast_identifier_get_name(alias_node);
 			projections[j] = alias;
 		}
 
@@ -1039,15 +1047,26 @@ static AST_Validation _ValidateUnion_Clauses
 			}
 
 			for(uint j = 0; j < proj_count; j++) {
-				const cypher_astnode_t *proj = cypher_ast_return_get_projection(return_clause, j);
-				const cypher_astnode_t *alias_node = cypher_ast_projection_get_alias(proj);
-				if(alias_node == NULL)  {
-					// The projection was not aliased, so the projection itself must be an identifier.
-					alias_node = cypher_ast_projection_get_expression(proj);
-					ASSERT(cypher_astnode_type(alias_node) == CYPHER_AST_IDENTIFIER);
+				const char *alias = NULL;
+				const cypher_astnode_t *proj =
+					cypher_ast_return_get_projection(return_clause, j);
+				const cypher_astnode_t *alias_node =
+					cypher_ast_projection_get_alias(proj);
+
+				if(alias_node != NULL)  {
+					alias = cypher_ast_identifier_get_name(alias_node);
+				} else {
+					// the projection was not aliased
+					// verify if it is an identifier to take its name as alias
+					const cypher_astnode_t *exp =
+						cypher_ast_projection_get_expression(proj);
+					cypher_astnode_type_t type = cypher_astnode_type(exp);
+					if(type == CYPHER_AST_IDENTIFIER) {
+						alias = cypher_ast_identifier_get_name(exp);
+					}
 				}
-				const char *alias = cypher_ast_identifier_get_name(alias_node);
-				if(strcmp(projections[j], alias) != 0) {
+				if(alias == NULL || projections[j] == NULL ||
+					strcmp(projections[j], alias) != 0) {
 					ErrorCtx_SetError("All sub queries in a UNION must have the same column names.");
 					res = AST_INVALID;
 					goto cleanup;
@@ -1349,14 +1368,15 @@ references to outside variables");
 
 		uint n_projections = cypher_ast_return_nprojections(return_clause);
 		for(uint i = 0; i < n_projections; i++) {
+			const char *var_name = NULL;
 			const cypher_astnode_t *proj =
 				cypher_ast_return_get_projection(return_clause, i);
-			const char *var_name;
 			const cypher_astnode_t *alias_node =
 				cypher_ast_projection_get_alias(proj);
 			const cypher_astnode_t *exp =
 					cypher_ast_projection_get_expression(proj);
-			if(alias_node) {
+
+			if(alias_node != NULL) {
 				var_name = cypher_ast_identifier_get_name(alias_node);
 				if(exp &&
 				   cypher_astnode_type(exp) == CYPHER_AST_IDENTIFIER &&
@@ -1755,17 +1775,18 @@ static VISITOR_STRATEGY _Validate_RETURN_Clause
 
 	// introduce bound vars
 	for(uint i = 0; i < num_return_projections; i ++) {
+		const char *alias = NULL;
 		const cypher_astnode_t *proj = cypher_ast_return_get_projection(n, i);
 		const cypher_astnode_t *identifier =
 			cypher_ast_projection_get_alias(proj);
-		const cypher_astnode_t *exp =
-			cypher_ast_projection_get_expression(proj);
 		const cypher_astnode_t *alias_node =
 			cypher_ast_projection_get_alias(proj);
-		const char *alias = NULL;
-		if (alias_node) {
+
+		if (alias_node != NULL) {
 			alias = cypher_ast_identifier_get_name(identifier);
 		} else {
+			const cypher_astnode_t *exp =
+				cypher_ast_projection_get_expression(proj);
 			cypher_astnode_type_t type = cypher_astnode_type(exp);
 			if(type == CYPHER_AST_IDENTIFIER) {
 				alias = cypher_ast_identifier_get_name(exp);
