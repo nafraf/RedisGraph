@@ -25,7 +25,8 @@ TARGET=$(BINDIR)/lib/src/.libs/libcypher-parser.a
 
 CFLAGS += \
 	-fPIC \
-	-O3 \
+	-g \
+	-O0 \
 	-DYY_BUFFER_SIZE=1048576 \
 	-I$(BINDIR)/lib/src \
 	$(CFLAGS.$(OS))

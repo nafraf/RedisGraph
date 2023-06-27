@@ -232,8 +232,19 @@ static void _add_first_clause
 	// -------------------------------------------------------------------------
 	// insert new clause as first clause of callsubquery
 	// -------------------------------------------------------------------------
-	cypher_astnode_t *query = cypher_ast_call_subquery_get_query(callsubquery);
-	cypher_ast_query_push_clause(query, new_clause, first_ind);
+
+	cypher_ast_call_subquery_push_clause(callsubquery, new_clause, first_ind);
+
+	// cypher_astnode_t *query = cypher_ast_call_subquery_get_query(callsubquery);
+	// cypher_astnode_t *new_query = cypher_ast_query_push_clause(query, new_clause, first_ind);
+
+	// const cypher_astnode_t *clause = cypher_ast_query_get_clause(new_query, 2);
+	// printf("Nafraf: clause[2] type=%d\n", cypher_astnode_type(clause));
+
+	// cypher_ast_call_subquery_replace_query(callsubquery, new_query);
+
+	// const cypher_astnode_t *clause2 = cypher_ast_query_get_clause(new_query, 2);
+	// printf("Nafraf: clause[2] type=%d\n", cypher_astnode_type(clause2));
 }
 
 // replace all intermediate WITH clauses in the query with new WITH clauses,
