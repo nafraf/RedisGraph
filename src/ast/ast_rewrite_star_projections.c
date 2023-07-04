@@ -36,6 +36,9 @@ static void replace_clause
 		collect_aliases_in_scope(root, scope_start, scope_end, identifiers);
 	}
 
+	printf("Nafraf: inital raxSize=%ld\n", raxSize(identifiers));
+	uint found_ids = 0;
+
 	//--------------------------------------------------------------------------
 	// determine number of projections
 	//--------------------------------------------------------------------------
@@ -44,28 +47,34 @@ static void replace_clause
 	// e.g.
 	// RETURN *, x, 1+2
 	// `x`, `1+2` are explicit projections
-	uint existing_projections_count = (t == CYPHER_AST_WITH) ?
-		cypher_ast_with_nprojections(clause) :
-		cypher_ast_return_nprojections(clause);
+	// uint existing_projections_count = (t == CYPHER_AST_WITH) ?
+	// 	cypher_ast_with_nprojections(clause) :
+	// 	cypher_ast_return_nprojections(clause);
+	uint existing_projections_count = 0;
 
-	//--------------------------------------------------------------------------
-	// remove explicit identifiers
-	//--------------------------------------------------------------------------
+	// //--------------------------------------------------------------------------
+	// // remove explicit identifiers
+	// //--------------------------------------------------------------------------
 
-	for(uint i = 0; i < existing_projections_count; i ++) {
-		const cypher_astnode_t *projection = (t == CYPHER_AST_WITH) ?
-			cypher_ast_with_get_projection(clause, i) :
-			cypher_ast_return_get_projection(clause, i);
-		// if the projection has an alias use it,
-		// otherwise the expression is the alias
-		const cypher_astnode_t *exp =
-			cypher_ast_projection_get_alias(projection);
-		exp = exp ? exp : cypher_ast_projection_get_expression(projection);
-		ASSERT(cypher_astnode_type(exp) == CYPHER_AST_IDENTIFIER);
+	//uint removed = 0;
 
-		const char *identifier = cypher_ast_identifier_get_name(exp);
-		raxRemove(identifiers, (unsigned char *)identifier, strlen(identifier), NULL);
-	}
+	// for(uint i = 0; i < existing_projections_count; i ++) {
+	// 	const cypher_astnode_t *projection = (t == CYPHER_AST_WITH) ?
+	// 		cypher_ast_with_get_projection(clause, i) :
+	// 		cypher_ast_return_get_projection(clause, i);
+	// 	// if the projection has an alias use it,
+	// 	// otherwise the expression is the alias
+	// 	const cypher_astnode_t *exp =
+	// 		cypher_ast_projection_get_alias(projection);
+	// 	exp = exp ? exp : cypher_ast_projection_get_expression(projection);
+	// 	ASSERT(cypher_astnode_type(exp) == CYPHER_AST_IDENTIFIER);
+
+	// 	const char *identifier = cypher_ast_identifier_get_name(exp);
+	// 	raxRemove(identifiers, (unsigned char *)identifier, strlen(identifier), NULL);
+	// 	printf("Nafraf: Removing: %s\n", identifier);
+	// 	//removed++;
+	// }
+	//existing_projections_count -= removed;
 
 	// compute identifiers_count after duplication removal
 	uint identifiers_count = raxSize(identifiers);
@@ -109,7 +118,7 @@ static void replace_clause
 			// e.g.
 			// MATCH () RETURN *
 			ErrorCtx_SetError("RETURN * is not allowed when there are no variables in scope");
-			raxFree(identifiers);
+			//raxFree(identifiers);
 			return;
 		} else {
 			// build an empty projection
@@ -150,7 +159,7 @@ static void replace_clause
 	// update `nprojections` to actual number of projections
 	// value might be reduced due to duplicates
 	nprojections = proj_idx;
-	raxFree(identifiers);
+	//raxFree(identifiers);
 
 	// prepare arguments for new return clause node
 	bool                    distinct   =  false ;
@@ -218,6 +227,7 @@ static void replace_clause
 	cypher_ast_free(clause);
 	// replace original clause with fully populated one
 	cypher_ast_query_set_clause(root, new_clause, scope_end);
+	printf("Nafraf: final raxSize=%ld\n", raxSize(identifiers));
 }
 
 // rewrites star projections in a CALL {} clause
@@ -290,49 +300,103 @@ static bool _rewrite_call_subquery_star_projections
 	return rewritten;
 }
 
-bool AST_RewriteStarProjections
-(
-	const cypher_astnode_t *root  // root for which to rewrite star projections
-) {
+bool AST_RewriteStarProjections(
+	const cypher_astnode_t *root // root for which to rewrite star projections
+)
+{
+	printf("Nafraf: AST_RewriteStarProjections\n");
 	bool rewritten = false;
 
-	if(cypher_astnode_type(root) != CYPHER_AST_QUERY) {
+	if (cypher_astnode_type(root) != CYPHER_AST_QUERY) {
 		return false;
 	}
 
 	// rewrite all WITH * / RETURN * clauses to include all aliases
 	uint scope_start  = 0;
 	uint clause_count = cypher_ast_query_nclauses(root);
+	rax *identifiers  = raxNew();
 
 	for(uint i = 0; i < clause_count; i ++) {
 		const cypher_astnode_t *clause = cypher_ast_query_get_clause(root, i);
-		cypher_astnode_type_t t = cypher_astnode_type(clause);
+		cypher_astnode_type_t type = cypher_astnode_type(clause);
 
-		if(t == CYPHER_AST_CALL_SUBQUERY) {
+		if (type == CYPHER_AST_CALL_SUBQUERY)
+		{
+			collect_call_subquery_projections(clause, identifiers);
 			rewritten |=
-				_rewrite_call_subquery_star_projections(root, scope_start, i);
-			continue;
+				_rewrite_call_subquery_star_projections(root, scope_start, i);	
+		} else if (type == CYPHER_AST_MATCH) {
+			// the MATCH clause contains one pattern of N paths
+			const cypher_astnode_t *pattern =
+				cypher_ast_match_get_pattern(clause);
+			collect_aliases_in_pattern(pattern, identifiers);
+		} else if (type == CYPHER_AST_CREATE) {
+			// the CREATE clause contains one pattern of N paths
+			const cypher_astnode_t *pattern =
+				cypher_ast_create_get_pattern(clause);
+			collect_aliases_in_pattern(pattern, identifiers);
+		} else if (type == CYPHER_AST_MERGE) {
+			// the MERGE clause contains one path
+			const cypher_astnode_t *path =
+				cypher_ast_merge_get_pattern_path(clause);
+			collect_aliases_in_path(path, identifiers);
+		} else if (type == CYPHER_AST_UNWIND) {
+			// the UNWIND clause introduces one alias
+			const cypher_astnode_t *unwind_alias =
+				cypher_ast_unwind_get_alias(clause);
+			const char *identifier =
+				cypher_ast_identifier_get_name(unwind_alias);
+			raxTryInsert(identifiers, (unsigned char *)identifier,
+							strlen(identifier), (void *)unwind_alias, NULL);
+		} else if (type == CYPHER_AST_CALL) {
+			collect_call_projections(clause, identifiers);
+		} else if (type == CYPHER_AST_WITH) {
+
+			//DEBUG
+			printf("Nafraf: type=CYPHER_AST_WITH include=%d scope_start=%d i=%d\n",
+					cypher_ast_with_has_include_existing(clause), scope_start, i);
+
+			if(cypher_ast_with_has_include_existing(clause)) {
+
+				collect_with_projections(clause, identifiers);
+
+				// clause contains a star projection, replace it
+				replace_clause((cypher_astnode_t *)root,
+					(cypher_astnode_t *)clause, scope_start, i, identifiers);
+				rewritten = true;
+			} else {
+				collect_with_projections(clause, identifiers);
+			}
+			// raxFree(identifiers);
+			// identifiers = raxNew();
+			// update scope start
+			scope_start = i;
+			
+		} else if (type == CYPHER_AST_RETURN) {
+
+			//DEBUG
+			printf("Nafraf: type=CYPHER_AST_RETURN include=%d scope_start=%d i=%d\n",
+					cypher_ast_return_has_include_existing(clause), scope_start, i);
+
+			if(cypher_ast_return_has_include_existing(clause)) {
+
+				collect_return_projections(clause, identifiers);
+
+				// clause contains a star projection, replace it
+				replace_clause((cypher_astnode_t *)root,
+					(cypher_astnode_t *)clause, scope_start, i, identifiers);
+				rewritten = true;
+			} else {
+			 	collect_return_projections(clause, identifiers);
+			}
+			// raxFree(identifiers);
+			// identifiers = raxNew();
+			// update scope start
+			scope_start = i;
+			
 		}
-
-		if(t != CYPHER_AST_WITH && t != CYPHER_AST_RETURN) {
-			continue;
-		}
-
-		bool has_include_existing = (t == CYPHER_AST_WITH) ?
-									cypher_ast_with_has_include_existing(clause) :
-									cypher_ast_return_has_include_existing(clause);
-
-		if(has_include_existing) {
-			// clause contains a star projection, replace it
-			replace_clause((cypher_astnode_t *)root, (cypher_astnode_t *)clause,
-						   scope_start, i, NULL);
-			rewritten = true;
-		}
-
-		// update scope start
-		scope_start = i;
 	}
-
+	raxFree(identifiers);
 	return rewritten;
 }
 
