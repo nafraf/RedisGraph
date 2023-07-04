@@ -358,17 +358,23 @@ bool AST_RewriteStarProjections(
 
 			if(cypher_ast_with_has_include_existing(clause)) {
 
-				collect_with_projections(clause, identifiers);
-
 				// clause contains a star projection, replace it
 				replace_clause((cypher_astnode_t *)root,
 					(cypher_astnode_t *)clause, scope_start, i, identifiers);
+
+				// update identifiers after replacing the projection
+				const cypher_astnode_t *newclause =	cypher_ast_query_get_clause(root, i);
+				raxFree(identifiers);
+				identifiers = raxNew();
+				collect_with_projections(newclause, identifiers);
+
 				rewritten = true;
 			} else {
+				raxFree(identifiers);
+				identifiers = raxNew();
 				collect_with_projections(clause, identifiers);
 			}
-			// raxFree(identifiers);
-			// identifiers = raxNew();
+		
 			// update scope start
 			scope_start = i;
 			
@@ -380,17 +386,22 @@ bool AST_RewriteStarProjections(
 
 			if(cypher_ast_return_has_include_existing(clause)) {
 
-				collect_return_projections(clause, identifiers);
-
 				// clause contains a star projection, replace it
 				replace_clause((cypher_astnode_t *)root,
 					(cypher_astnode_t *)clause, scope_start, i, identifiers);
+
+				// update identifiers after replacing the projection
+				const cypher_astnode_t *newclause =	cypher_ast_query_get_clause(root, i);
+				raxFree(identifiers);
+				identifiers = raxNew();
+				collect_return_projections(newclause, identifiers);
+
 				rewritten = true;
 			} else {
+				raxFree(identifiers);
+				identifiers = raxNew();
 			 	collect_return_projections(clause, identifiers);
 			}
-			// raxFree(identifiers);
-			// identifiers = raxNew();
 			// update scope start
 			scope_start = i;
 			
